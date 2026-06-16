@@ -4,7 +4,7 @@ import { getProducts as getProductsApi } from '../services/api/products.js';
 import ProductCard from '../components/shop/ProductCard.jsx';
 
 const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=2200&q=85';
+  'https://images.unsplash.com/photo-1511886929837-354d827aae26?auto=format&fit=crop&w=2200&q=85';
 
 const categories = [
   {
