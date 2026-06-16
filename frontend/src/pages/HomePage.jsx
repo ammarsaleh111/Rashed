@@ -223,25 +223,63 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="border-b border-white/10 py-8">
-        <div className="mx-auto grid max-w-[1440px] grid-cols-2 gap-3 px-4 sm:grid-cols-3 sm:px-6 md:grid-cols-6 md:px-10">
-          {brandLogos.map((brand) => (
-            <div key={brand} className="grid min-h-16 place-items-center rounded-lg border border-white/10 bg-black/25">
-              <span className="home-display text-2xl uppercase tracking-wide text-white/70">{brand}</span>
-            </div>
-          ))}
+      {/* Premium Marquee for Brands */}
+      <section className="border-y border-white/10 bg-black py-16">
+        <div className="marquee-track relative">
+          {/* Subtle fade edges for the marquee */}
+          <div className="absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-black to-transparent pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-black to-transparent pointer-events-none" />
+          
+          <div className="marquee-content">
+            {brandLogos.map((brand, i) => (
+              <span 
+                key={`${brand}-1`} 
+                className="marquee-item text-4xl hover:text-neon transition-colors duration-300 md:text-5xl"
+                style={{ '--marquee-tilt-delay': `${i * 0.2}s` }}
+              >
+                {brand}
+              </span>
+            ))}
+          </div>
+          <div className="marquee-content" aria-hidden="true">
+            {brandLogos.map((brand, i) => (
+              <span 
+                key={`${brand}-2`} 
+                className="marquee-item text-4xl hover:text-neon transition-colors duration-300 md:text-5xl"
+                style={{ '--marquee-tilt-delay': `${i * 0.2}s` }}
+              >
+                {brand}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="py-12 md:py-16">
-        <div className="mx-auto max-w-[1100px] px-4 sm:px-6 md:px-10">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Modernized Trust Grid */}
+      <section className="py-16 md:py-24 bg-[#080b0a]">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 md:px-10">
+          <div className="mb-12 text-center">
+            <h2 className="home-display text-3xl uppercase tracking-widest text-white md:text-4xl">
+              Why Choose <span className="text-neon">Us</span>
+            </h2>
+            <div className="mx-auto mt-4 h-[2px] w-12 bg-neon/80" />
+          </div>
+          
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {trustItems.map((item) => (
-              <article key={item.label} className="home-stat-card grid min-h-28 place-items-center rounded-xl text-center">
-                <svg className="h-7 w-7 text-neon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7">
-                  <path d={item.icon} strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-white/75">{item.label}</p>
+              <article 
+                key={item.label} 
+                className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-black/40 py-10 px-6 backdrop-blur-md transition-all duration-500 hover:-translate-y-2 hover:border-neon/30 hover:bg-white/[0.02] hover:shadow-[0_10px_40px_rgba(94,255,51,0.06)]"
+              >
+                <div className="absolute inset-0 z-0 bg-gradient-to-b from-neon/0 to-neon/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+                <div className="relative z-10 mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 transition-transform duration-500 group-hover:scale-110 group-hover:bg-neon/10">
+                  <svg className="h-8 w-8 text-white/70 transition-colors duration-500 group-hover:text-neon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                    <path d={item.icon} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <p className="relative z-10 text-[13px] font-bold uppercase tracking-[0.2em] text-white/80 transition-colors duration-500 group-hover:text-white">
+                  {item.label}
+                </p>
               </article>
             ))}
           </div>
