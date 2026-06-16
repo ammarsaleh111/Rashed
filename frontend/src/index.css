@@ -102,13 +102,7 @@ html.light-mode body {
 *::before,
 *::after {
   transition-property:
-    background-color,
-    border-color,
-    color,
-    fill,
-    stroke,
-    box-shadow,
-    opacity,
+    background-color, border-color, color, fill, stroke, box-shadow, opacity,
     transform;
   transition-duration: 220ms;
   transition-timing-function: ease;
@@ -1002,7 +996,8 @@ html.light-mode .storefront-input {
   backdrop-filter: blur(10px);
 }
 
-html.light-mode .storefront-header-shell:not(.home-header .storefront-header-shell),
+html.light-mode
+  .storefront-header-shell:not(.home-header .storefront-header-shell),
 html.light-mode .storefront-dropdown:not(.home-header .storefront-dropdown) {
   border-color: rgba(15, 23, 42, 0.16);
   background:
@@ -1016,21 +1011,29 @@ html.light-mode .storefront-dropdown:not(.home-header .storefront-dropdown) {
 }
 
 html.light-mode .storefront-nav-link:not(.home-header .storefront-nav-link),
-html.light-mode .storefront-icon-button:not(.home-header .storefront-icon-button),
-html.light-mode .storefront-account-button:not(.home-header .storefront-account-button) {
+html.light-mode
+  .storefront-icon-button:not(.home-header .storefront-icon-button),
+html.light-mode
+  .storefront-account-button:not(.home-header .storefront-account-button) {
   border-color: rgba(15, 23, 42, 0.16);
   color: rgba(15, 23, 42, 0.78);
   background: rgba(255, 255, 255, 0.74);
 }
 
-html.light-mode .storefront-nav-link:not(.home-header .storefront-nav-link):hover,
-html.light-mode .storefront-icon-button:not(.home-header .storefront-icon-button):hover,
-html.light-mode .storefront-account-button:not(.home-header .storefront-account-button):hover {
+html.light-mode
+  .storefront-nav-link:not(.home-header .storefront-nav-link):hover,
+html.light-mode
+  .storefront-icon-button:not(.home-header .storefront-icon-button):hover,
+html.light-mode
+  .storefront-account-button:not(
+    .home-header .storefront-account-button
+  ):hover {
   border-color: var(--theme-accent);
   color: var(--theme-accent);
 }
 
-html.light-mode .storefront-nav-link-active:not(.home-header .storefront-nav-link-active) {
+html.light-mode
+  .storefront-nav-link-active:not(.home-header .storefront-nav-link-active) {
   border-color: var(--theme-accent);
   color: var(--theme-accent);
   background: rgba(34, 197, 94, 0.11);
@@ -1107,7 +1110,11 @@ html.light-mode [class*="hover:bg-[#222]"]:hover {
 html.light-mode [class*="bg-zinc-900/"],
 html.light-mode [class*="bg-black/"],
 html.light-mode [class*="bg-white/[0.04]"] {
-  background-color: color-mix(in srgb, var(--theme-bg-surface) 86%, transparent) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--theme-bg-surface) 86%,
+    transparent
+  ) !important;
 }
 
 html.light-mode [class*="from-black"],
@@ -1169,7 +1176,11 @@ html.light-mode [class*="fill-zinc-"] {
 }
 
 html.light-mode :where(input, textarea, select) {
-  background-color: color-mix(in srgb, var(--theme-bg-surface) 92%, var(--theme-bg-elevated)) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--theme-bg-surface) 92%,
+    var(--theme-bg-elevated)
+  ) !important;
   border-color: var(--theme-border-soft) !important;
   color: var(--theme-text-primary) !important;
 }
@@ -1251,16 +1262,30 @@ html.light-mode [class*="border-[#7DFF63]"] {
   border-color: var(--theme-accent) !important;
 }
 
-html.light-mode .home-shell :where(.border-white\/10, .border-white\/15, .border-white\/20),
+html.light-mode
+  .home-shell
+  :where(.border-white\/10, .border-white\/15, .border-white\/20),
 html.light-mode .home-shell [class*="border-white/"] {
-  border-color: color-mix(in srgb, var(--theme-border-soft) 92%, transparent) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--theme-border-soft) 92%,
+    transparent
+  ) !important;
 }
 
 html.light-mode .home-mission-card :where(.text-white, [class*="text-white/"]),
-html.light-mode .home-product-card .relative :where(.text-white, [class*="text-white/"]),
+html.light-mode
+  .home-product-card
+  .relative
+  :where(.text-white, [class*="text-white/"]),
 html.light-mode .home-product-card .relative .home-chip,
-html.light-mode .home-glass-panel .relative :where(.text-white, [class*="text-white/"]),
-html.light-mode [class*="bg-gradient-to-"] :where(.text-white, [class*="text-white/"]) {
+html.light-mode
+  .home-glass-panel
+  .relative
+  :where(.text-white, [class*="text-white/"]),
+html.light-mode
+  [class*="bg-gradient-to-"]
+  :where(.text-white, [class*="text-white/"]) {
   color: rgba(255, 255, 255, 0.9) !important;
 }
 
@@ -1284,7 +1309,11 @@ html.light-mode footer {
 }
 
 html.dark-mode :where(input, textarea, select) {
-  background-color: color-mix(in srgb, var(--theme-bg-surface) 82%, #000000) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--theme-bg-surface) 82%,
+    #000000
+  ) !important;
   border-color: var(--theme-border-soft) !important;
   color: var(--theme-text-primary) !important;
 }
@@ -1326,17 +1355,27 @@ html.light-mode .theme-input {
 
 html.light-mode .auth-page {
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(241, 245, 249, 0.92)),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.94),
+      rgba(241, 245, 249, 0.92)
+    ),
     var(--theme-bg-canvas) !important;
 }
 
 html.light-mode .auth-panel {
   background:
-    radial-gradient(circle at 100% 0%, rgba(22, 163, 74, 0.08), transparent 34%),
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(22, 163, 74, 0.08),
+      transparent 34%
+    ),
     var(--theme-bg-canvas) !important;
 }
 
-html.light-mode .auth-visual :where(.text-white, [class*="text-gray-"], [class*="text-white/"]) {
+html.light-mode
+  .auth-visual
+  :where(.text-white, [class*="text-gray-"], [class*="text-white/"]) {
   color: rgba(255, 255, 255, 0.9) !important;
 }
 
