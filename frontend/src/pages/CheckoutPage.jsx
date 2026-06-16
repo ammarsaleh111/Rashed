@@ -82,26 +82,13 @@ const CheckoutPage = () => {
       return;
     }
 
-    const orderItems = items.map((item) => ({
-      productName: item.name,
-      variantName: item.variant || '',
-      sku: item.sku || '',
-      imageUrl: item.imageUrl || '',
-      quantity: Number(item.quantity || 0),
-      unitPrice: Number(item.unitPrice || 0),
-      lineTotal: Number(item.lineTotal || item.unitPrice * item.quantity || 0),
-    }));
-
     const result = await checkoutCart({
       customer: {
         name: formValues.name,
         phone: formValues.phone,
-        email: formValues.email,
-        city: formValues.city,
         address: formValues.address,
-        notes: formValues.notes,
       },
-      items: orderItems,
+      total,
     });
 
     if (!result.success) {
@@ -111,7 +98,7 @@ const CheckoutPage = () => {
 
     const orderResponse = result?.data || {};
     sessionStorage.setItem(ORDER_CONFIRMATION_STORAGE_KEY, JSON.stringify(orderResponse));
-    navigate('/order-success', { state: { order: orderResponse } });
+    navigate('/order-success', { state: { order: orderResponse }, replace: true });
   };
 
   if (!cartLoading && !items.length) {

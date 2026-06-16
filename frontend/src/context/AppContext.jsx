@@ -391,12 +391,16 @@ export const AppProvider = ({ children }) => {
     }
   }, [getCartSessionId]);
 
-  const checkoutCart = async ({ customer = {}, items = [] } = {}) => {
+  const checkoutCart = async ({ customer = {}, total } = {}) => {
     setCheckoutLoading(true);
     setCartError('');
 
     try {
-      const response = await checkoutCartApi({ customer, items });
+      const response = await checkoutCartApi({
+        customer,
+        total,
+        sessionId: getCartSessionId(),
+      });
 
       setCart({ ...EMPTY_CART_STATE, sessionId: getCartSessionId() || null });
 
@@ -405,7 +409,7 @@ export const AppProvider = ({ children }) => {
         setOrders(myOrders?.data || []);
       }
 
-      return { success: true, data: response?.data };
+      return { success: true, data: response };
     } catch (error) {
       const message = error?.response?.data?.message || 'Unable to complete checkout.';
       setCartError(message);

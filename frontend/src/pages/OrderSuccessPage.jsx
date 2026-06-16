@@ -1,47 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const STORAGE_KEY = 'rashed_latest_order_confirmation';
 
 const formatMoney = (value) => `${Number(value || 0).toFixed(2)} EGP`;
-
-const buildFallbackWhatsappUrl = (order) => {
-  const phone = String(import.meta.env.VITE_WHATSAPP_NUMBER || '').replace(/\D/g, '');
-
-  if (!phone || !order?.orderNumber) {
-    return '';
-  }
-
-  const items = Array.isArray(order.items) ? order.items : [];
-  const customer = order.customer || {};
-  const message = [
-    'Order Confirmation',
-    '',
-    `Order ID: #${order.orderNumber}`,
-    '',
-    'Customer:',
-    `Name: ${customer.name || ''}`,
-    `Phone: ${customer.phone || ''}`,
-    '',
-    'Address:',
-    `${customer.address || ''}`,
-    '',
-    'Items:',
-    ...items.map((item) => {
-      const quantity = Number(item.quantity || 0);
-      const lineTotal = Number(item.lineTotal || Number(item.unitPrice || 0) * quantity);
-      return `- ${item.productName || item.name || 'Item'} x ${quantity} = ${formatMoney(lineTotal)}`;
-    }),
-    '',
-    `Total: ${formatMoney(order.totalAmount || order.subtotal || 0)}`,
-    '',
-    'Please confirm this order.',
-  ].join('\n');
-
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-};
-
-const normalizeOrderResponse = (response) => response?.data?.order || response?.order || response || {};
 
 const readStoredOrder = () => {
   try {
@@ -65,14 +27,18 @@ const OrderSuccessPage = () => {
   }, [location.state]);
 
   const response = storedOrder || {};
-  const order = normalizeOrderResponse(response);
-  const whatsappUrl = response.whatsappUrl || order.whatsappUrl || buildFallbackWhatsappUrl(order);
-  const orderId = response.orderId || order.orderId || order.orderNumber || '';
-  const totalAmount = order.totalAmount || response.totalAmount || order.subtotal || 0;
+  const order = response.order || response;
+  const orderId = response.orderId || order.orderId || '';
+  const whatsappUrl = response.whatsappUrl || order.whatsappUrl || '';
+  const totalAmount = order.total || order.totalAmount || response.total || 0;
 
-  const confirmationLabel = useMemo(() => {
-    return orderId ? `Order #${orderId}` : 'Order confirmed';
-  }, [orderId]);
+  const handleConfirmWhatsApp = () => {
+    if (!whatsappUrl) {
+      return;
+    }
+
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <section className="mx-auto w-full max-w-4xl px-4 py-10 text-white sm:px-6 sm:py-16">
@@ -85,31 +51,26 @@ const OrderSuccessPage = () => {
 
         <p className="mt-5 text-[11px] uppercase tracking-[0.24em] text-[#39FF14]">Order Confirmed</p>
         <h1 className="storefront-title mt-3 text-[clamp(2.6rem,8vw,5rem)]">Your order has been created successfully.</h1>
-        <p className="mt-4 text-sm uppercase tracking-[0.16em] text-zinc-400">{confirmationLabel}</p>
+        <p className="mt-4 text-sm uppercase tracking-[0.16em] text-zinc-400">{orderId ? `Order #${orderId}` : 'Order confirmed'}</p>
         <p className="mt-2 text-sm text-zinc-400">Cash on delivery: {formatMoney(totalAmount)}</p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a
-            href={whatsappUrl || '#'}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={handleConfirmWhatsApp}
+            disabled={!whatsappUrl}
             className={`storefront-primary px-6 ${!whatsappUrl ? 'pointer-events-none opacity-50' : ''}`}
           >
             Confirm Order on WhatsApp
-          </a>
+          </button>
           <button type="button" onClick={() => navigate('/shop')} className="storefront-secondary px-6">
             Continue Shopping
           </button>
         </div>
 
         <p className="mt-4 text-[11px] uppercase tracking-[0.14em] text-white/50">
-          WhatsApp will open with the full order message pre-filled.
+          WhatsApp opens with the full order message pre-filled.
         </p>
-
-        <div className="mt-8 rounded-2xl border border-white/10 bg-black/25 p-4 text-left text-sm text-zinc-300">
-          <p className="text-[10px] uppercase tracking-[0.22em] text-white/55">Need to review later?</p>
-          <p className="mt-2">Your order reference is stored here for this session. If you close this page, you can still return and confirm the order from the same browser session.</p>
-        </div>
       </div>
 
       <div className="mt-6 text-center">

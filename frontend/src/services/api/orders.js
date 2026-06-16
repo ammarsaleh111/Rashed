@@ -1,17 +1,17 @@
 import apiClient from './client.js';
 
-export const checkoutCart = async ({ customer, items } = {}) => {
+export const checkoutCart = async ({ customer = {}, total, sessionId } = {}) => {
   const response = await apiClient.post(
     '/orders',
     {
-      payment_method: 'COD',
-      customerName: customer?.name || '',
-      customerPhone: customer?.phone || '',
-      customerEmail: customer?.email || '',
-      customerCity: customer?.city || '',
-      customerAddress: customer?.address || '',
-      customerNotes: customer?.notes || '',
-      items: Array.isArray(items) ? items : [],
+      paymentMethod: 'COD',
+      customerName: customer.name || '',
+      customerPhone: customer.phone || '',
+      customerAddress: customer.address || '',
+      total,
+    },
+    {
+      headers: sessionId ? { 'x-session-id': sessionId } : {},
     },
   );
 

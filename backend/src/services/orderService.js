@@ -1,154 +1,129 @@
-import { getOrderDatabase } from '../config/orderDb.js';
+import { getDatabase } from '../config/db.js';
+import {
+  getCartByActor,
+  getCartItemsForCheckout,
+  getDefaultAddressId,
+  getOrderItemsByOrderIds,
+  getOrdersByUserId,
+  insertOrder,
+  insertOrderItems,
+  resolveActor,
+} from '../models/orderModel.js';
 
-const generateOrderNumber = () => {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const randomPart = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `ORD-${timestamp}-${randomPart}`;
-};
+const UNIQUE_VIOLATION_CODES = new Set([2601, 2627]);
 
 const toMoney = (value) => Number(Number(value || 0).toFixed(2));
 
-const insertOrderWithRetry = async (connection, orderPayload) => {
-  let attempts = 0;
+const normalizeText = (value) => String(value || '').trim();
 
-  while (attempts < 3) {
-    const orderNumber = generateOrderNumber();
-
-    try {
-      const [orderResult] = await connection.execute(
-        `
-        INSERT INTO orders (
-          order_number,
-          user_id,
-          customer_name,
-          customer_phone,
-          customer_email,
-          customer_city,
-          customer_address,
-          customer_notes,
-          subtotal,
-          shipping_cost,
-          tax_amount,
-          total_amount,
-          currency,
-          payment_method,
-          status,
-          whatsapp_phone
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-          orderNumber,
-          orderPayload.userId,
-          orderPayload.customerName,
-          orderPayload.customerPhone,
-          orderPayload.customerEmail || null,
-          orderPayload.customerCity || null,
-          orderPayload.customerAddress,
-          orderPayload.customerNotes || null,
-          orderPayload.subtotal,
-          orderPayload.shippingCost,
-          orderPayload.taxAmount,
-          orderPayload.totalAmount,
-          'EGP',
-          'COD',
-          'Pending',
-          orderPayload.whatsappPhone || null,
-        ],
-      );
-
-      return {
-        orderId: orderResult.insertId,
-        orderNumber,
-      };
-    } catch (error) {
-      if (String(error?.code || '').toUpperCase() !== 'ER_DUP_ENTRY') {
-        throw error;
-      }
-
-      attempts += 1;
-    }
-  }
-
-  throw new Error('Unable to generate a unique order number.');
+const isDuplicateOrderNumberError = (error) => {
+  const number = Number(error?.number || error?.originalError?.number || error?.originalError?.info?.number);
+  return UNIQUE_VIOLATION_CODES.has(number);
 };
 
-export const createOrder = async ({ userId = null, customer, items, subtotal }) => {
-  const pool = getOrderDatabase();
-  const connection = await pool.getConnection();
+const generateOrderNumber = () => {
+  const timeFragment = Date.now().toString().slice(-6);
+  const randomFragment = Math.floor(1000 + Math.random() * 9000);
+  return `ORD-${timeFragment}-${randomFragment}`;
+};
 
-  const normalizedItems = items.map((item) => ({
-    productName: item.productName,
-    variantName: item.variantName || null,
-    sku: item.sku || null,
-    imageUrl: item.imageUrl || null,
-    quantity: Number(item.quantity),
-    unitPrice: toMoney(item.unitPrice),
-    lineTotal: toMoney(item.lineTotal ?? item.unitPrice * item.quantity),
-  }));
+const getCurrentCart = async ({ actor }) => {
+  const db = getDatabase();
+  const cart = await getCartByActor(db, actor);
 
-  const orderPayload = {
-    userId,
-    customerName: customer.name,
-    customerPhone: customer.phone,
-    customerEmail: customer.email || null,
-    customerCity: customer.city || null,
-    customerAddress: customer.address,
-    customerNotes: customer.notes || null,
-    subtotal: toMoney(subtotal),
-    shippingCost: 0,
-    taxAmount: 0,
-    totalAmount: toMoney(subtotal),
-    whatsappPhone: process.env.WHATSAPP_NUMBER || '',
+  if (!cart) {
+    return null;
+  }
+
+  const items = await getCartItemsForCheckout(db, cart.id);
+
+  return {
+    ...cart,
+    items,
   };
+};
+
+export const createCashOnDeliveryOrder = async ({
+  actor,
+  customerName,
+  customerPhone,
+  customerAddress,
+  total,
+}) => {
+  const db = getDatabase();
+  const connection = await db.getConnection();
+  const resolvedActor = actor || {};
+  const cart = await getCurrentCart({ actor: resolvedActor });
+
+  if (!cart || !cart.items.length) {
+    const error = new Error('Cart is empty. Add items before checkout.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedItems = cart.items;
+  const subtotal = toMoney(
+    normalizedItems.reduce((sum, item) => sum + Number(item.lineTotal || item.priceAtPurchase * item.quantity), 0),
+  );
+  const clientTotal = Number(total);
+
+  if (Number.isFinite(clientTotal) && Math.abs(clientTotal - subtotal) > 0.01) {
+    const error = new Error('Total does not match cart subtotal.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const shippingAddressId = await getDefaultAddressId(db, resolvedActor.userId);
+  const tax = 0;
+  const shippingCost = 0;
+  const totalAmount = subtotal;
 
   try {
     await connection.beginTransaction();
 
-    const { orderId, orderNumber } = await insertOrderWithRetry(connection, orderPayload);
+    let insertedOrder = null;
 
-    for (const item of normalizedItems) {
-      await connection.execute(
-        `
-        INSERT INTO order_items (
-          order_id,
-          product_name,
-          variant_name,
-          sku,
-          image_url,
-          quantity,
-          unit_price,
-          line_total
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-          orderId,
-          item.productName,
-          item.variantName,
-          item.sku,
-          item.imageUrl,
-          item.quantity,
-          item.unitPrice,
-          item.lineTotal,
-        ],
-      );
+    for (let attempt = 0; attempt < 5 && !insertedOrder; attempt += 1) {
+      const orderNumber = generateOrderNumber();
+
+      try {
+        insertedOrder = await insertOrder(connection, {
+          orderNumber,
+          userId: resolvedActor.userId,
+          shippingAddressId,
+          subtotal,
+          tax,
+          shippingCost,
+          totalAmount,
+          status: 'Pending',
+        });
+      } catch (error) {
+        if (!isDuplicateOrderNumberError(error)) {
+          throw error;
+        }
+      }
     }
 
+    if (!insertedOrder) {
+      throw new Error('Unable to generate a unique order number.');
+    }
+
+    await insertOrderItems(connection, insertedOrder.id, normalizedItems);
     await connection.commit();
 
     return {
-      id: orderId,
-      orderNumber,
-      customer: {
-        name: orderPayload.customerName,
-        phone: orderPayload.customerPhone,
-        email: orderPayload.customerEmail,
-        city: orderPayload.customerCity,
-        address: orderPayload.customerAddress,
-        notes: orderPayload.customerNotes,
-      },
+      id: insertedOrder.id,
+      orderNumber: insertedOrder.orderNumber,
+      customerName: normalizeText(customerName),
+      customerPhone: normalizeText(customerPhone),
+      customerAddress: normalizeText(customerAddress),
+      subtotal,
+      tax,
+      shippingCost,
+      totalAmount,
+      status: 'Pending',
       items: normalizedItems,
-      subtotal: orderPayload.subtotal,
-      totalAmount: orderPayload.totalAmount,
+      createdAt: new Date().toISOString(),
     };
   } catch (error) {
     await connection.rollback();
@@ -158,32 +133,42 @@ export const createOrder = async ({ userId = null, customer, items, subtotal }) 
   }
 };
 
-export const getOrdersForUser = async (userId) => {
-  const pool = getOrderDatabase();
-  const [orders] = await pool.execute(
-    `
-    SELECT
-      id,
-      order_number AS orderNumber,
-      customer_name AS customerName,
-      customer_phone AS customerPhone,
-      customer_email AS customerEmail,
-      customer_city AS customerCity,
-      customer_address AS customerAddress,
-      subtotal,
-      shipping_cost AS shippingCost,
-      tax_amount AS taxAmount,
-      total_amount AS totalAmount,
-      status,
-      currency,
-      payment_method AS paymentMethod,
-      created_at AS createdAt
-    FROM orders
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-    `,
-    [userId],
-  );
+export const getMyOrders = async (userId) => {
+  if (!userId) {
+    return [];
+  }
 
-  return orders;
+  const orders = await getOrdersByUserId(userId);
+
+  if (!orders.length) {
+    return [];
+  }
+
+  const orderIds = orders.map((order) => order.id);
+  const items = await getOrderItemsByOrderIds(orderIds);
+  const itemsByOrderId = items.reduce((accumulator, item) => {
+    if (!accumulator[item.order_id]) {
+      accumulator[item.order_id] = [];
+    }
+
+    accumulator[item.order_id].push(item);
+    return accumulator;
+  }, {});
+
+  return orders.map((order) => ({
+    ...order,
+    items: itemsByOrderId[order.id] || [],
+  }));
+};
+
+export const getCurrentCartForActor = async (req) => {
+  const actor = resolveActor(req);
+
+  if (actor.error) {
+    const error = new Error(actor.error.message);
+    error.statusCode = actor.error.statusCode;
+    throw error;
+  }
+
+  return getCurrentCart({ actor });
 };

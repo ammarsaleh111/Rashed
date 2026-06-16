@@ -1,44 +1,40 @@
-const DEFAULT_COUNTRY_CODE = '20';
+const normalizePhoneNumber = (value) => String(value || '').replace(/\D/g, '');
 
-const normalizePhoneNumber = (value) => {
-  const digits = String(value || '').replace(/\D/g, '');
+const formatMoney = (value) => `${Number(value || 0).toFixed(2)} EGP`;
 
-  if (!digits) {
-    return '';
-  }
+export const buildOrderConfirmationMessage = (payload) => {
+  const orderId = payload?.orderId || payload?.orderNumber || '';
+  const customer = payload?.customer || {};
+  const customerName = payload?.customerName || customer.name || '';
+  const customerPhone = payload?.customerPhone || customer.phone || '';
+  const customerAddress = payload?.customerAddress || customer.address || '';
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const total = payload?.totalAmount ?? payload?.total ?? 0;
 
-  if (digits.startsWith('0')) {
-    return `${DEFAULT_COUNTRY_CODE}${digits.slice(1)}`;
-  }
-
-  return digits;
-};
-
-const formatCurrency = (value) => `${Number(value || 0).toFixed(2)} EGP`;
-
-export const buildOrderConfirmationMessage = ({ orderNumber, customer, items, totalAmount }) => {
   const lines = [
     'Order Confirmation',
     '',
-    `Order ID: #${orderNumber}`,
+    `Order ID: #${orderId}`,
     '',
     'Customer:',
-    `Name: ${customer?.name || ''}`,
-    `Phone: ${customer?.phone || ''}`,
+    `Name: ${customerName || ''}`,
+    `Phone: ${customerPhone || ''}`,
     '',
     'Address:',
-    `${customer?.address || ''}`,
+    `${customerAddress || ''}`,
     '',
     'Items:',
     ...(Array.isArray(items)
       ? items.map((item) => {
           const quantity = Number(item.quantity || 0);
-          const lineTotal = Number(item.lineTotal || Number(item.unitPrice || 0) * quantity);
-          return `- ${item.productName} x ${quantity} = ${formatCurrency(lineTotal)}`;
+          const unitPrice = Number(item.price ?? item.unitPrice ?? 0);
+          const lineTotal = Number(item.lineTotal ?? unitPrice * quantity);
+
+          return `* ${item.productName || 'Item'} x ${quantity} = ${formatMoney(lineTotal)}`;
         })
       : []),
     '',
-    `Total: ${formatCurrency(totalAmount)}`,
+    `Total: ${formatMoney(total)}`,
     '',
     'Please confirm this order.',
   ];
@@ -46,13 +42,14 @@ export const buildOrderConfirmationMessage = ({ orderNumber, customer, items, to
   return lines.join('\n');
 };
 
-export const buildWhatsAppUrl = ({ orderNumber, customer, items, totalAmount }) => {
+export const buildWhatsAppUrl = (order) => {
   const whatsappNumber = normalizePhoneNumber(process.env.WHATSAPP_NUMBER);
-  const message = buildOrderConfirmationMessage({ orderNumber, customer, items, totalAmount });
+  const message = buildOrderConfirmationMessage(order);
+  const encodedMessage = encodeURIComponent(message);
 
   if (!whatsappNumber) {
-    return `https://wa.me/?text=${encodeURIComponent(message)}`;
+    return `https://wa.me/?text=${encodedMessage}`;
   }
 
-  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 };
