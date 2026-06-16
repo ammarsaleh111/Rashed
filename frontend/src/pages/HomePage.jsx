@@ -4,7 +4,7 @@ import { getProducts as getProductsApi } from '../services/api/products.js';
 import ProductCard from '../components/shop/ProductCard.jsx';
 
 const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1459865264687-595d652de67e?auto=format&fit=crop&w=2200&q=85';
+  'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=2200&q=85';
 
 const categories = [
   {
@@ -134,30 +134,49 @@ const HomePage = () => {
 
   return (
     <div className="home-shell text-white">
-      <section className="relative overflow-hidden border-b border-white/10 bg-[#080b0a]">
-        <div className="mx-auto grid min-h-[760px] max-w-[1440px] gap-8 px-4 pb-10 pt-10 sm:px-6 md:px-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
-          <div className="relative z-10 py-10 lg:py-20">
-            <p className="home-kicker">Football Store</p>
-            <h1 className="home-display mt-5 max-w-2xl text-[clamp(4rem,11vw,8rem)] uppercase leading-[0.84]">
-              Gear Up.
-            </h1>
-            <div className="mt-6 h-1 w-24 bg-neon" />
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/shop" className="home-neon-button">Shop Now</Link>
-              <Link to="/shop?category=football-boots" className="home-ring-button">Shop Boots</Link>
-            </div>
-          </div>
+      <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden border-b border-white/10 bg-[#080b0a]">
+        {/* Full width Background Image */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={HERO_IMAGE} 
+            alt="Football background" 
+            className="h-full w-full object-cover opacity-30 mix-blend-luminosity" 
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-[#080b0a]" />
+          <div className="absolute inset-0 bg-neon/5" />
+        </div>
 
-          <div className="relative min-h-[430px] overflow-hidden rounded-[1.2rem] border border-white/12 bg-black shadow-[0_24px_70px_rgba(0,0,0,0.38)] lg:min-h-[620px]">
-            <img src={HERO_IMAGE} alt="Football player kicking a ball" className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/8 to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4 grid grid-cols-3 gap-2">
-              {['T-shirts', 'Boots', 'Balls'].map((item) => (
-                <Link key={item} to={`/shop?category=${item === 'T-shirts' ? 'football-jerseys' : `football-${item.toLowerCase()}`}`} className="border border-white/16 bg-black/55 px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-white backdrop-blur transition hover:border-neon hover:text-neon">
-                  {item}
-                </Link>
-              ))}
-            </div>
+        {/* Minimal Centered Content */}
+        <div className="relative z-10 mx-auto w-full max-w-5xl px-4 py-20 text-center sm:px-6 md:px-10">
+          <p className="mb-4 text-xs font-bold uppercase tracking-[0.3em] text-neon sm:text-sm">
+            Rashed Sport Pro Gear
+          </p>
+          <h1 className="home-display mx-auto mb-6 text-[clamp(3.5rem,10vw,8rem)] uppercase leading-[0.85] text-white">
+            Unleash Your<br />
+            <span 
+              className="text-transparent" 
+              style={{ WebkitTextStroke: '2px #5eff33' }}
+            >
+              Potential
+            </span>
+          </h1>
+          <p className="mx-auto mb-10 max-w-2xl text-sm font-light leading-relaxed text-gray-400 sm:text-base">
+            Engineered for speed, control, and precision. Discover the latest elite football gear and dominate every single match.
+          </p>
+          
+          <div className="flex flex-wrap justify-center gap-5">
+            <Link 
+              to="/shop" 
+              className="rounded bg-neon px-8 py-4 text-sm font-bold uppercase tracking-widest text-black transition-all hover:bg-white hover:text-black hover:shadow-[0_0_20px_rgba(94,255,51,0.4)]"
+            >
+              Shop Collection
+            </Link>
+            <Link 
+              to="/shop?category=football-boots" 
+              className="rounded border border-white/20 bg-black/40 px-8 py-4 text-sm font-bold uppercase tracking-widest text-white backdrop-blur-md transition-all hover:border-neon hover:text-neon"
+            >
+              Explore Boots
+            </Link>
           </div>
         </div>
       </section>
