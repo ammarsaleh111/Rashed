@@ -83,7 +83,7 @@ const MainLayout = () => {
 
   return (
     <div className="min-h-screen overflow-x-hidden text-white">
-      <header className="sticky top-0 z-40 px-2 pt-2 sm:px-3 sm:pt-3 md:px-6 md:pt-4">
+      <header className={`z-50 px-2 pt-2 sm:px-3 sm:pt-3 md:px-6 md:pt-4 ${isHomePage ? 'home-header absolute top-0 w-full' : 'sticky top-0'}`}>
         <div className="storefront-header-shell mx-auto max-w-[1700px] px-3 py-3 md:px-5">
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 md:gap-4">
             <div className="flex min-w-0 items-center gap-3 sm:min-w-[130px]">

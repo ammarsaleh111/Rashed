@@ -134,15 +134,15 @@ const HomePage = () => {
 
   return (
     <div className="home-shell text-white">
-      <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden border-b border-white/10 bg-[#080b0a]">
+      <section className="relative flex min-h-[90vh] items-center justify-center overflow-hidden border-b border-white/10 bg-[#080b0a] pt-[120px]">
         {/* Full width Background Image */}
         <div className="absolute inset-0 z-0">
           <img 
             src={HERO_IMAGE} 
             alt="Football background" 
-            className="h-full w-full object-cover opacity-30 mix-blend-luminosity" 
+            className="h-full w-full object-cover opacity-40 mix-blend-luminosity" 
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-[#080b0a]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/50 to-[#080b0a]" />
           <div className="absolute inset-0 bg-neon/5" />
         </div>
 

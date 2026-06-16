@@ -1002,8 +1002,8 @@ html.light-mode .storefront-input {
   backdrop-filter: blur(10px);
 }
 
-html.light-mode .storefront-header-shell,
-html.light-mode .storefront-dropdown {
+html.light-mode .storefront-header-shell:not(.home-header .storefront-header-shell),
+html.light-mode .storefront-dropdown:not(.home-header .storefront-dropdown) {
   border-color: rgba(15, 23, 42, 0.16);
   background:
     linear-gradient(
@@ -1015,28 +1015,64 @@ html.light-mode .storefront-dropdown {
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.11);
 }
 
-html.light-mode .storefront-nav-link,
-html.light-mode .storefront-icon-button,
-html.light-mode .storefront-account-button {
+html.light-mode .storefront-nav-link:not(.home-header .storefront-nav-link),
+html.light-mode .storefront-icon-button:not(.home-header .storefront-icon-button),
+html.light-mode .storefront-account-button:not(.home-header .storefront-account-button) {
   border-color: rgba(15, 23, 42, 0.16);
   color: rgba(15, 23, 42, 0.78);
   background: rgba(255, 255, 255, 0.74);
 }
 
-html.light-mode .storefront-nav-link:hover,
-html.light-mode .storefront-icon-button:hover,
-html.light-mode .storefront-account-button:hover {
+html.light-mode .storefront-nav-link:not(.home-header .storefront-nav-link):hover,
+html.light-mode .storefront-icon-button:not(.home-header .storefront-icon-button):hover,
+html.light-mode .storefront-account-button:not(.home-header .storefront-account-button):hover {
   border-color: var(--theme-accent);
   color: var(--theme-accent);
 }
 
-html.light-mode .storefront-nav-link-active {
+html.light-mode .storefront-nav-link-active:not(.home-header .storefront-nav-link-active) {
   border-color: var(--theme-accent);
   color: var(--theme-accent);
   background: rgba(34, 197, 94, 0.11);
 }
 
-/* Theme Unification Layer */
+/* Light mode overrides that break the dark premium hero */
+html.light-mode .home-shell [class*="bg-black"],
+html.light-mode .home-shell [class*="bg-[#080b0a]"],
+html.light-mode .home-shell [class*="bg-zinc-900"],
+html.light-mode .home-shell [class*="from-black"],
+html.light-mode .home-shell [class*="via-black"],
+html.light-mode .home-shell [class*="to-black"],
+html.light-mode .home-shell .text-white,
+html.light-mode .home-shell [class*="text-white/"] {
+  /* Prevent overriding inside home-shell so hero stays dark & premium */
+}
+
+/* Specific resets for home-shell to ignore global !important light-mode rules if possible, but actually we should just exclude .home-shell from the general selectors. Let's rewrite the selectors to use :not(.home-shell) if possible, or just add more specific rules here. */
+html.light-mode .home-shell .text-white {
+  color: #ffffff !important;
+}
+
+html.light-mode .home-shell .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+html.light-mode .home-shell [class*="from-transparent"] {
+  /* keep it transparent */
+}
+
+html.light-mode .home-shell [class*="bg-[#080b0a]"] {
+  background-color: #080b0a !important;
+}
+html.light-mode .home-shell [class*="bg-black"] {
+  background-color: #000000 !important;
+}
+
+html.light-mode .home-shell [class*="via-black/"] {
+  --tw-gradient-via: rgba(0, 0, 0, 0.4) var(--tw-gradient-via-position) !important;
+}
+
+/* Also: fix the top white gap by making the header overlay the hero on the homepage */
 
 html {
   background: var(--theme-bg-canvas);
