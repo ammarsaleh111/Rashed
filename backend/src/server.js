@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 
 import app from './app.js';
 import { connectDatabase } from './config/db.js';
+import { connectOrderDatabase } from './config/orderDb.js';
 
 dotenv.config();
 
@@ -10,6 +11,7 @@ const port = Number(process.env.PORT) || 5000;
 const startServer = async () => {
   try {
     await connectDatabase();
+    await connectOrderDatabase();
 
     app.listen(port, () => {
       console.log(`Rashed backend listening on port ${port}`);

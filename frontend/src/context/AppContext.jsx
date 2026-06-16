@@ -391,21 +391,14 @@ export const AppProvider = ({ children }) => {
     }
   }, [getCartSessionId]);
 
-  const checkoutCart = async ({ shippingAddressId } = {}) => {
+  const checkoutCart = async ({ customer = {}, items = [] } = {}) => {
     setCheckoutLoading(true);
     setCartError('');
 
     try {
-      const response = await checkoutCartApi({
-        sessionId: getCartSessionId(),
-        shippingAddressId,
-      });
+      const response = await checkoutCartApi({ customer, items });
 
-      if (response?.data?.cart) {
-        setCart(normalizeCartPayload(response.data.cart));
-      } else {
-        setCart({ ...EMPTY_CART_STATE, sessionId: getCartSessionId() || null });
-      }
+      setCart({ ...EMPTY_CART_STATE, sessionId: getCartSessionId() || null });
 
       if (authToken) {
         const myOrders = await getMyOrdersApi();

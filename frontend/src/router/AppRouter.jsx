@@ -12,6 +12,7 @@ import UserDashboardPage from '../pages/UserDashboardPage.jsx';
 import StaticInfoPage from '../pages/StaticInfoPage.jsx';
 import ContactPage from '../pages/ContactPage.jsx';
 import CheckoutPage from '../pages/CheckoutPage.jsx';
+import OrderSuccessPage from '../pages/OrderSuccessPage.jsx';
 
 const normalizeRole = (role) => String(role || '').trim().toLowerCase();
 
@@ -69,6 +70,7 @@ const AppRouter = () => {
         <Route path="/products/:slug" element={<ProductDetailPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/order-success" element={<OrderSuccessPage />} />
         <Route path="/help" element={<StaticInfoPage variant="help" />} />
         <Route path="/terms" element={<StaticInfoPage variant="terms" />} />
         <Route path="/privacy" element={<StaticInfoPage variant="privacy" />} />
