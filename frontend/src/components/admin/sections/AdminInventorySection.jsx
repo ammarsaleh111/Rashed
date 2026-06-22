@@ -511,7 +511,7 @@ const AdminInventorySection = ({ inventory, onInventoryMutated }) => {
                     <p className="text-[10px] uppercase tracking-widest text-white/45 mt-1">/{product.slug}</p>
                   </td>
                   <td className="px-5 py-4 text-white/75">{product.categoryName || 'Uncategorized'}</td>
-                  <td className="px-5 py-4">${Number(product.basePrice || 0).toFixed(2)}</td>
+                  <td className="px-5 py-4">{Number(product.basePrice || 0).toFixed(2)} EGP</td>
                   <td className="px-5 py-4">{Number(product.totalStock || 0)}</td>
                   <td className="px-5 py-4">{Number(product.variantCount || 0)}</td>
                   <td className="px-5 py-4 text-white/65">{formatDateTime(product.updatedAt)}</td>

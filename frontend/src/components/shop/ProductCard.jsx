@@ -71,7 +71,7 @@ const ProductCard = ({ product }) => {
           <h3 className="min-w-0 font-display text-base font-bold uppercase leading-none tracking-tight text-white">
             {product.name}
           </h3>
-          <span className="shrink-0 font-display text-base font-bold text-white">${product.price.toFixed(2)}</span>
+          <span className="shrink-0 font-display text-base font-bold text-white">{product.price.toFixed(2)} EGP</span>
         </div>
 
         <p className="mb-3 text-[10px] uppercase tracking-widest text-zinc-400">{product.colorName}</p>

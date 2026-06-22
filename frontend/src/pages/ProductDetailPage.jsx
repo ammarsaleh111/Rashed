@@ -418,7 +418,7 @@ const ProductDetailPage = () => {
           <p className="mt-3 text-sm leading-relaxed text-white/70">{shortDescription}</p>
 
           <div className="mt-5 flex items-end justify-between gap-4">
-            <p className="text-4xl font-bold text-neon">${product.price.toFixed(2)}</p>
+            <p className="text-4xl font-bold text-neon">{product.price.toFixed(2)} EGP</p>
             <div className="flex items-center gap-1">
               <div className="flex text-neon">
                 {[...Array(5)].map((_, index) => (
