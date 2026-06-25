@@ -37,7 +37,7 @@ export const resolveActor = (req) => {
 
 export const getCartByActor = async (db, actor) => {
   const { clause, params } = buildActorWhereClause(actor);
-  const [rows] = await db.query(`SELECT TOP 1 id, user_id, session_id FROM carts WHERE ${clause}`, params);
+  const [rows] = await db.query(`SELECT id, user_id, session_id FROM carts WHERE ${clause} LIMIT 1`, params);
   return rows[0] || null;
 };
 
@@ -86,10 +86,11 @@ export const getDefaultAddressId = async (db, userId) => {
 
   const [rows] = await db.query(
     `
-    SELECT TOP 1 id
+    SELECT id
     FROM addresses
     WHERE user_id = ?
     ORDER BY is_default DESC, id DESC
+    LIMIT 1
     `,
     [userId],
   );
@@ -110,8 +111,8 @@ export const insertOrder = async (connection, orderPayload) => {
       total_amount,
       status
     )
-    OUTPUT INSERTED.id AS insertId
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    RETURNING id
     `,
     [
       orderPayload.orderNumber,

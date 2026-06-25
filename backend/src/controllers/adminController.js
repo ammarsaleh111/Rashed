@@ -119,23 +119,20 @@ const normalizeOrderStatus = (status) => {
 
 const ensureContactMessagesTable = async (database) => {
   await database.query(`
-    IF OBJECT_ID('dbo.contact_messages', 'U') IS NULL
-    BEGIN
-      CREATE TABLE dbo.contact_messages (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        user_id INT NULL,
-        full_name NVARCHAR(150) NOT NULL,
-        email NVARCHAR(255) NOT NULL,
-        subject NVARCHAR(255) NOT NULL,
-        message NVARCHAR(MAX) NOT NULL,
-        status NVARCHAR(20) NOT NULL CONSTRAINT DF_contact_messages_status DEFAULT 'new',
-        admin_note NVARCHAR(MAX) NULL,
-        created_at DATETIME2(0) NOT NULL CONSTRAINT DF_contact_messages_created_at DEFAULT SYSUTCDATETIME(),
-        updated_at DATETIME2(0) NOT NULL CONSTRAINT DF_contact_messages_updated_at DEFAULT SYSUTCDATETIME(),
-        CONSTRAINT CK_contact_messages_status CHECK (status IN ('new', 'read', 'resolved')),
-        CONSTRAINT FK_contact_messages_user FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE SET NULL
-      )
-    END
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      user_id INT NULL,
+      full_name VARCHAR(150) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      subject VARCHAR(255) NOT NULL,
+      message TEXT NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'new',
+      admin_note TEXT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT CK_contact_messages_status CHECK (status IN ('new', 'read', 'resolved')),
+      CONSTRAINT FK_contact_messages_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    )
   `);
 };
 
@@ -171,50 +168,50 @@ export const getAdminDashboard = async (_request, response, next) => {
       database.query(`
         SELECT COALESCE(SUM(total_amount), 0) AS total
         FROM orders
-        WHERE created_at >= DATEADD(day, -30, SYSUTCDATETIME())
+        WHERE created_at >= now() - interval '30 days'
           AND status <> 'Cancelled'
       `),
       database.query(`
         SELECT COALESCE(SUM(total_amount), 0) AS total
         FROM orders
-        WHERE created_at >= DATEADD(day, -60, SYSUTCDATETIME())
-          AND created_at < DATEADD(day, -30, SYSUTCDATETIME())
+        WHERE created_at >= now() - interval '60 days'
+          AND created_at < now() - interval '30 days'
           AND status <> 'Cancelled'
       `),
       database.query(`
         SELECT COUNT(*) AS total
         FROM orders
         WHERE status <> 'Cancelled'
-          AND created_at >= DATEADD(day, -30, SYSUTCDATETIME())
+          AND created_at >= now() - interval '30 days'
       `),
       database.query(`
         SELECT COUNT(*) AS total
         FROM orders
         WHERE status <> 'Cancelled'
-          AND created_at >= DATEADD(day, -60, SYSUTCDATETIME())
-          AND created_at < DATEADD(day, -30, SYSUTCDATETIME())
+          AND created_at >= now() - interval '60 days'
+          AND created_at < now() - interval '30 days'
       `),
       database.query(`
         SELECT COUNT(*) AS total
         FROM users
         WHERE role = 'customer'
-          AND created_at >= DATEADD(day, -30, SYSUTCDATETIME())
+          AND created_at >= now() - interval '30 days'
       `),
       database.query(`
         SELECT COUNT(*) AS total
         FROM users
         WHERE role = 'customer'
-          AND created_at >= DATEADD(day, -60, SYSUTCDATETIME())
-          AND created_at < DATEADD(day, -30, SYSUTCDATETIME())
+          AND created_at >= now() - interval '60 days'
+          AND created_at < now() - interval '30 days'
       `),
       database.query(`
         SELECT
           COALESCE(
             (
               SELECT CAST(COUNT(*) AS DECIMAL(10, 2)) FROM orders
-              WHERE created_at >= DATEADD(day, -30, SYSUTCDATETIME())
+              WHERE created_at >= now() - interval '30 days'
             ) / NULLIF(
-              (SELECT CAST(COUNT(*) AS DECIMAL(10, 2)) FROM carts WHERE created_at >= DATEADD(day, -30, SYSUTCDATETIME())),
+              (SELECT CAST(COUNT(*) AS DECIMAL(10, 2)) FROM carts WHERE created_at >= now() - interval '30 days'),
               0
             ) * 100,
             0
@@ -225,13 +222,13 @@ export const getAdminDashboard = async (_request, response, next) => {
           COALESCE(
             (
               SELECT CAST(COUNT(*) AS DECIMAL(10, 2)) FROM orders
-              WHERE created_at >= DATEADD(day, -60, SYSUTCDATETIME())
-                AND created_at < DATEADD(day, -30, SYSUTCDATETIME())
+              WHERE created_at >= now() - interval '60 days'
+                AND created_at < now() - interval '30 days'
             ) / NULLIF(
               (
                 SELECT CAST(COUNT(*) AS DECIMAL(10, 2)) FROM carts
-                WHERE created_at >= DATEADD(day, -60, SYSUTCDATETIME())
-                  AND created_at < DATEADD(day, -30, SYSUTCDATETIME())
+                WHERE created_at >= now() - interval '60 days'
+                  AND created_at < now() - interval '30 days'
               ),
               0
             ) * 100,
@@ -241,7 +238,7 @@ export const getAdminDashboard = async (_request, response, next) => {
       database.query(`
         SELECT COALESCE(AVG(total_amount), 0) AS total
         FROM orders
-        WHERE created_at >= DATEADD(day, -30, SYSUTCDATETIME())
+        WHERE created_at >= now() - interval '30 days'
           AND status <> 'Cancelled'
       `),
       database.query(`
@@ -253,7 +250,7 @@ export const getAdminDashboard = async (_request, response, next) => {
                 SELECT user_id
                 FROM orders
                 WHERE user_id IS NOT NULL
-                  AND created_at >= DATEADD(day, -30, SYSUTCDATETIME())
+                  AND created_at >= now() - interval '30 days'
                 GROUP BY user_id
                 HAVING COUNT(*) > 1
               ) repeat_customers
@@ -262,7 +259,7 @@ export const getAdminDashboard = async (_request, response, next) => {
                 SELECT CAST(COUNT(DISTINCT user_id) AS DECIMAL(10, 2))
                 FROM orders
                 WHERE user_id IS NOT NULL
-                  AND created_at >= DATEADD(day, -30, SYSUTCDATETIME())
+                  AND created_at >= now() - interval '30 days'
               ),
               0
             ) * 100,
@@ -284,21 +281,21 @@ export const getAdminDashboard = async (_request, response, next) => {
           (SELECT COUNT(*) FROM products) AS total_products,
           (SELECT COUNT(*) FROM product_variants) AS total_variants,
           (SELECT COUNT(*) FROM product_variants WHERE stock_quantity <= 5) AS low_stock_variants,
-          (SELECT COUNT(*) FROM products WHERE is_featured = 1) AS featured_products
+          (SELECT COUNT(*) FROM products WHERE is_featured = TRUE) AS featured_products
       `),
       database.query(`
         SELECT
           (SELECT COUNT(*) FROM users WHERE role = 'customer') AS total_customers,
-          (SELECT COUNT(*) FROM users WHERE role = 'customer' AND created_at >= DATEADD(day, -30, SYSUTCDATETIME())) AS new_customers_30d,
+          (SELECT COUNT(*) FROM users WHERE role = 'customer' AND created_at >= now() - interval '30 days') AS new_customers_30d,
           (
             SELECT COUNT(DISTINCT user_id)
             FROM orders
             WHERE user_id IS NOT NULL
-              AND created_at >= DATEADD(day, -30, SYSUTCDATETIME())
+              AND created_at >= now() - interval '30 days'
           ) AS active_customers_30d
       `),
       database.query(`
-        SELECT TOP 5
+        SELECT
           CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
           u.email,
           COUNT(o.id) AS total_orders,
@@ -310,6 +307,7 @@ export const getAdminDashboard = async (_request, response, next) => {
         WHERE u.role = 'customer'
         GROUP BY u.id, u.first_name, u.last_name, u.email
         ORDER BY lifetime_value DESC, total_orders DESC, customer_name ASC
+        LIMIT 5
       `),
       database.query(`
         SELECT status, COUNT(*) AS total
@@ -325,39 +323,39 @@ export const getAdminDashboard = async (_request, response, next) => {
       `),
       database.query(`
         SELECT
-          CONVERT(char(7), created_at, 120) AS bucket,
-          UPPER(LEFT(DATENAME(month, created_at), 3)) AS label,
+          to_char(created_at, 'YYYY-MM') AS bucket,
+          UPPER(to_char(created_at, 'Mon')) AS label,
           COALESCE(SUM(total_amount), 0) AS revenue
         FROM orders
-        WHERE created_at >= DATEADD(month, -6, DATEFROMPARTS(YEAR(SYSUTCDATETIME()), MONTH(SYSUTCDATETIME()), 1))
+        WHERE created_at >= date_trunc('month', now()) - interval '6 months'
           AND status <> 'Cancelled'
-        GROUP BY CONVERT(char(7), created_at, 120), UPPER(LEFT(DATENAME(month, created_at), 3))
+        GROUP BY to_char(created_at, 'YYYY-MM'), UPPER(to_char(created_at, 'Mon'))
         ORDER BY bucket
       `),
       database.query(`
         SELECT
           CAST(created_at AS date) AS bucket,
-          FORMAT(created_at, 'MMM d') AS label,
+          to_char(created_at, 'Mon FMDD') AS label,
           COALESCE(SUM(total_amount), 0) AS revenue
         FROM orders
-        WHERE created_at >= DATEADD(day, -29, CAST(SYSUTCDATETIME() AS date))
+        WHERE created_at >= CAST(now() AS date) - interval '29 days'
           AND status <> 'Cancelled'
-        GROUP BY CAST(created_at AS date), FORMAT(created_at, 'MMM d')
+        GROUP BY CAST(created_at AS date), to_char(created_at, 'Mon FMDD')
         ORDER BY bucket
       `),
       database.query(`
         SELECT
           CAST(created_at AS date) AS bucket,
-          UPPER(LEFT(DATENAME(weekday, created_at), 3)) AS label,
+          UPPER(to_char(created_at, 'Dy')) AS label,
           COALESCE(SUM(total_amount), 0) AS revenue
         FROM orders
-        WHERE created_at >= DATEADD(day, -6, CAST(SYSUTCDATETIME() AS date))
+        WHERE created_at >= CAST(now() AS date) - interval '6 days'
           AND status <> 'Cancelled'
-        GROUP BY CAST(created_at AS date), UPPER(LEFT(DATENAME(weekday, created_at), 3))
+        GROUP BY CAST(created_at AS date), UPPER(to_char(created_at, 'Dy'))
         ORDER BY bucket
       `),
       database.query(`
-        SELECT TOP 4
+        SELECT
           COALESCE(products.name, order_items.product_name) AS product_name,
           COALESCE(MAX(product_images.image_url), '') AS image_url,
           COALESCE(SUM(order_items.quantity), 0) AS units_sold,
@@ -370,12 +368,13 @@ export const getAdminDashboard = async (_request, response, next) => {
         LEFT JOIN products ON products.id = product_variants.product_id
         LEFT JOIN product_images
           ON product_images.product_id = products.id
-          AND product_images.is_primary = 1
-        GROUP BY COALESCE(products.id, order_items.product_name), COALESCE(products.name, order_items.product_name)
+          AND product_images.is_primary = TRUE
+        GROUP BY COALESCE(products.id, 0), COALESCE(products.name, order_items.product_name)
         ORDER BY units_sold DESC, revenue DESC
+        LIMIT 4
       `),
       database.query(`
-        SELECT TOP 24
+        SELECT
           order_number,
           COALESCE(CONCAT(users.first_name, ' ', users.last_name), 'Guest Checkout') AS customer_name,
           total_amount,
@@ -384,6 +383,7 @@ export const getAdminDashboard = async (_request, response, next) => {
         FROM orders
         LEFT JOIN users ON users.id = orders.user_id
         ORDER BY orders.created_at DESC
+        LIMIT 24
       `),
     ]);
 

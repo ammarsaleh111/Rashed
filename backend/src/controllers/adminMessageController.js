@@ -10,23 +10,20 @@ const createHttpError = (statusCode, message) => {
 
 const ensureContactMessagesTable = async (db) => {
   await db.query(`
-    IF OBJECT_ID('dbo.contact_messages', 'U') IS NULL
-    BEGIN
-      CREATE TABLE dbo.contact_messages (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        user_id INT NULL,
-        full_name NVARCHAR(150) NOT NULL,
-        email NVARCHAR(255) NOT NULL,
-        subject NVARCHAR(255) NOT NULL,
-        message NVARCHAR(MAX) NOT NULL,
-        status NVARCHAR(20) NOT NULL CONSTRAINT DF_contact_messages_status DEFAULT 'new',
-        admin_note NVARCHAR(MAX) NULL,
-        created_at DATETIME2(0) NOT NULL CONSTRAINT DF_contact_messages_created_at DEFAULT SYSUTCDATETIME(),
-        updated_at DATETIME2(0) NOT NULL CONSTRAINT DF_contact_messages_updated_at DEFAULT SYSUTCDATETIME(),
-        CONSTRAINT CK_contact_messages_status CHECK (status IN ('new', 'read', 'resolved')),
-        CONSTRAINT FK_contact_messages_user FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE SET NULL
-      )
-    END
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      user_id INT NULL,
+      full_name VARCHAR(150) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      subject VARCHAR(255) NOT NULL,
+      message TEXT NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'new',
+      admin_note TEXT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT CK_contact_messages_status CHECK (status IN ('new', 'read', 'resolved')),
+      CONSTRAINT FK_contact_messages_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    )
   `);
 };
 
@@ -60,7 +57,7 @@ export const getAdminMessages = async (request, response, next) => {
     }
 
     if (search) {
-      whereClause += ' AND (cm.full_name LIKE ? OR cm.email LIKE ? OR cm.subject LIKE ? OR cm.message LIKE ?)';
+      whereClause += ' AND (cm.full_name ILIKE ? OR cm.email ILIKE ? OR cm.subject ILIKE ? OR cm.message ILIKE ?)';
       const token = `%${search}%`;
       whereParams.push(token, token, token, token);
     }
@@ -92,9 +89,9 @@ export const getAdminMessages = async (request, response, next) => {
       LEFT JOIN users u ON u.id = cm.user_id
       ${whereClause}
       ORDER BY cm.created_at DESC
-      OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+      LIMIT ? OFFSET ?
       `,
-      [...whereParams, offset, limit],
+      [...whereParams, limit, offset],
     );
 
     return response.status(200).json({
@@ -146,7 +143,7 @@ export const updateAdminMessage = async (request, response, next) => {
     const [result] = await db.query(
       `
       UPDATE contact_messages
-      SET status = ?, admin_note = ?, updated_at = SYSUTCDATETIME()
+      SET status = ?, admin_note = ?, updated_at = now()
       WHERE id = ?
       `,
       [status, adminNote, messageId],
@@ -157,7 +154,7 @@ export const updateAdminMessage = async (request, response, next) => {
     }
 
     const [rows] = await db.query(
-      'SELECT TOP 1 id, status, admin_note, updated_at FROM contact_messages WHERE id = ?',
+      'SELECT id, status, admin_note, updated_at FROM contact_messages WHERE id = ? LIMIT 1',
       [messageId],
     );
 

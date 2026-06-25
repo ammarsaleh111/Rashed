@@ -178,8 +178,8 @@ const ensureUniqueProductSlug = async (connection, desiredSlug, excludeProductId
 
   while (true) {
     const query = excludeProductId
-      ? 'SELECT TOP 1 id FROM products WHERE slug = ? AND id <> ?'
-      : 'SELECT TOP 1 id FROM products WHERE slug = ?';
+      ? 'SELECT id FROM products WHERE slug = ? AND id <> ? LIMIT 1'
+      : 'SELECT id FROM products WHERE slug = ? LIMIT 1';
     const params = excludeProductId ? [candidate, excludeProductId] : [candidate];
     const [rows] = await connection.query(query, params);
 
@@ -199,8 +199,8 @@ const ensureUniqueSku = async (connection, desiredSku, excludeVariantId = null) 
 
   while (true) {
     const query = excludeVariantId
-      ? 'SELECT TOP 1 id FROM product_variants WHERE sku = ? AND id <> ?'
-      : 'SELECT TOP 1 id FROM product_variants WHERE sku = ?';
+      ? 'SELECT id FROM product_variants WHERE sku = ? AND id <> ? LIMIT 1'
+      : 'SELECT id FROM product_variants WHERE sku = ? LIMIT 1';
     const params = excludeVariantId ? [candidate, excludeVariantId] : [candidate];
     const [rows] = await connection.query(query, params);
 
@@ -243,7 +243,7 @@ const resolveCategoryId = async (connection, payload) => {
       throw createHttpError(400, 'category_id must be a valid positive integer.');
     }
 
-    const [rows] = await connection.query('SELECT TOP 1 id FROM categories WHERE id = ?', [parsedCategoryId]);
+    const [rows] = await connection.query('SELECT id FROM categories WHERE id = ? LIMIT 1', [parsedCategoryId]);
 
     if (!rows.length) {
       throw createHttpError(400, 'The specified category_id does not exist.');
@@ -259,7 +259,7 @@ const resolveCategoryId = async (connection, payload) => {
       throw createHttpError(400, 'category_slug is invalid.');
     }
 
-    const [rows] = await connection.query('SELECT TOP 1 id FROM categories WHERE slug = ?', [normalizedSlug]);
+    const [rows] = await connection.query('SELECT id FROM categories WHERE slug = ? LIMIT 1', [normalizedSlug]);
 
     if (!rows.length) {
       throw createHttpError(400, 'The specified category_slug does not exist.');
@@ -276,7 +276,7 @@ const resolveCategoryId = async (connection, payload) => {
       throw createHttpError(400, 'Category name could not be converted into a valid slug.');
     }
 
-    const [existing] = await connection.query('SELECT TOP 1 id FROM categories WHERE slug = ?', [categorySlug]);
+    const [existing] = await connection.query('SELECT id FROM categories WHERE slug = ? LIMIT 1', [categorySlug]);
     const existingId = existing[0]?.id;
 
     if (existingId) {
@@ -295,8 +295,8 @@ const resolveCategoryId = async (connection, payload) => {
     const [insertResult] = await connection.query(
       `
       INSERT INTO categories (name, slug)
-      OUTPUT INSERTED.id AS insertId
       VALUES (?, ?)
+      RETURNING id
       `,
       [normalizedName, categorySlug],
     );
@@ -576,10 +576,11 @@ const fetchProductsWithRelations = async (connection, productIds) => {
       ) AS variant_count,
       COALESCE(
         (
-          SELECT TOP 1 pi.image_url
+          SELECT pi.image_url
           FROM product_images pi
           WHERE pi.product_id = p.id
           ORDER BY pi.is_primary DESC, pi.display_order ASC, pi.id ASC
+          LIMIT 1
         ),
         ''
       ) AS primary_image
@@ -691,14 +692,15 @@ const normalizeConflictError = (error) => {
     return error;
   }
 
-  if (error?.number === 2627 || error?.number === 2601) {
-    const duplicateMessage = String(error.message || '');
+  // Postgres unique_violation error code
+  if (error?.code === '23505') {
+    const constraintName = String(error.constraint || '');
 
-    if (duplicateMessage.includes('UQ_products_slug')) {
+    if (constraintName.includes('uq_products_slug') || constraintName.includes('products_slug')) {
       return createHttpError(409, 'A product with this slug already exists.');
     }
 
-    if (duplicateMessage.includes('UQ_product_variants_sku')) {
+    if (constraintName.includes('uq_product_variants_sku') || constraintName.includes('product_variants_sku')) {
       return createHttpError(409, 'A product variant SKU already exists.');
     }
 
@@ -742,7 +744,7 @@ export const getAdminProducts = async (request, response, next) => {
     const whereParams = [];
 
     if (search) {
-      whereClause += ' AND (p.name LIKE ? OR p.slug LIKE ?)';
+      whereClause += ' AND (p.name ILIKE ? OR p.slug ILIKE ?)';
       const token = `%${search}%`;
       whereParams.push(token, token);
     }
@@ -762,9 +764,9 @@ export const getAdminProducts = async (request, response, next) => {
       FROM products p
       ${whereClause}
       ORDER BY p.updated_at DESC, p.id DESC
-      OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+      LIMIT ? OFFSET ?
       `,
-      [...whereParams, offset, limit],
+      [...whereParams, limit, offset],
     );
 
     const productIds = productRows.map((row) => row.id);
@@ -841,8 +843,8 @@ export const createAdminProduct = async (request, response, next) => {
         base_price,
         is_featured
       )
-      OUTPUT INSERTED.id AS insertId
       VALUES (?, ?, ?, ?, ?, ?, ?)
+      RETURNING id
       `,
       [categoryId, name, slug, description, materialsCare, basePrice, isFeatured],
     );
@@ -894,9 +896,10 @@ export const updateAdminProduct = async (request, response, next) => {
 
     const [productRows] = await connection.query(
       `
-      SELECT TOP 1 id, category_id, name, slug, description, materials_care, base_price, is_featured
+      SELECT id, category_id, name, slug, description, materials_care, base_price, is_featured
       FROM products
       WHERE id = ?
+      LIMIT 1
       `,
       [productId],
     );
@@ -952,7 +955,7 @@ export const updateAdminProduct = async (request, response, next) => {
     await connection.query(
       `
       UPDATE products
-      SET category_id = ?, name = ?, slug = ?, description = ?, materials_care = ?, base_price = ?, is_featured = ?, updated_at = SYSUTCDATETIME()
+      SET category_id = ?, name = ?, slug = ?, description = ?, materials_care = ?, base_price = ?, is_featured = ?, updated_at = now()
       WHERE id = ?
       `,
       [
@@ -1062,7 +1065,7 @@ export const deleteAdminProduct = async (request, response, next) => {
       return response.status(400).json({ success: false, message: 'Product id must be a valid positive integer.' });
     }
 
-    const [productRows] = await connection.query('SELECT TOP 1 id, name FROM products WHERE id = ?', [productId]);
+    const [productRows] = await connection.query('SELECT id, name FROM products WHERE id = ? LIMIT 1', [productId]);
 
     if (!productRows.length) {
       return response.status(404).json({ success: false, message: 'Product not found.' });
@@ -1108,4 +1111,3 @@ export const deleteAdminProduct = async (request, response, next) => {
     connection.release();
   }
 };
-

@@ -15,9 +15,7 @@ if (missing.length > 0) {
 const run = async () => {
   const loginResponse = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email: process.env.ADMIN_EMAIL,
       password: process.env.ADMIN_PASSWORD,
@@ -35,9 +33,7 @@ const run = async () => {
   const token = loginPayload?.data?.token;
 
   const profileResponse = await fetch(`${API_BASE}/auth/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
 
   const profilePayload = await profileResponse.json();

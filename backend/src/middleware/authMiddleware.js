@@ -31,7 +31,7 @@ const attachUserFromToken = async (token) => {
   }
 
   const db = getDatabase();
-  const [rows] = await db.query('SELECT TOP 1 id, email, role FROM users WHERE id = ?', [userId]);
+  const [rows] = await db.query('SELECT id, email, role FROM users WHERE id = ? LIMIT 1', [userId]);
 
   if (!rows.length) {
     const error = new Error('Unauthorized. User no longer exists.');

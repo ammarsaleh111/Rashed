@@ -125,17 +125,19 @@ export const getProducts = async (req, res, next) => {
         c.name AS category_name,
         c.slug AS category_slug,
         (
-          SELECT TOP 1 pv.id
+          SELECT pv.id
           FROM product_variants pv
           WHERE pv.product_id = p.id
           ORDER BY pv.stock_quantity DESC, pv.id ASC
+          LIMIT 1
         ) AS default_variant_id,
         COALESCE(
           (
-            SELECT TOP 1 pv.stock_quantity
+            SELECT pv.stock_quantity
             FROM product_variants pv
             WHERE pv.product_id = p.id
             ORDER BY pv.stock_quantity DESC, pv.id ASC
+            LIMIT 1
           ),
           0
         ) AS default_variant_stock,
@@ -149,10 +151,11 @@ export const getProducts = async (req, res, next) => {
         ) AS total_stock,
         COALESCE(
           (
-            SELECT TOP 1 pi.image_url
+            SELECT pi.image_url
             FROM product_images pi
             WHERE pi.product_id = p.id
             ORDER BY pi.is_primary DESC, pi.display_order ASC, pi.id ASC
+            LIMIT 1
           ),
           ''
         ) AS primary_image,
@@ -160,7 +163,7 @@ export const getProducts = async (req, res, next) => {
         COALESCE((SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.product_id = p.id), 0) AS avg_rating
       ${fromAndWhere}
       ${orderClause}
-      OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+      LIMIT ? OFFSET ?
     `;
 
     const countQuery = `
@@ -169,7 +172,7 @@ export const getProducts = async (req, res, next) => {
     `;
 
     const offset = (parsedPage - 1) * parsedLimit;
-    const [products] = await db.query(productsQuery, [...filterParams, offset, parsedLimit]);
+    const [products] = await db.query(productsQuery, [...filterParams, parsedLimit, offset]);
     const [countRows] = await db.query(countQuery, filterParams);
     const totalCount = Number(countRows[0]?.total || 0);
 

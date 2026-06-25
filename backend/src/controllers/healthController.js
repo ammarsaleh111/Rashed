@@ -15,4 +15,3 @@ export const getHealthStatus = async (_request, response, next) => {
     next(error);
   }
 };
-

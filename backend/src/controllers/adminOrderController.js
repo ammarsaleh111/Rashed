@@ -53,7 +53,7 @@ export const getAdminOrders = async (request, response, next) => {
     }
 
     if (search) {
-      whereClause += " AND (o.order_number LIKE ? OR CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) LIKE ? OR u.email LIKE ?)";
+      whereClause += " AND (o.order_number ILIKE ? OR CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) ILIKE ? OR u.email ILIKE ?)";
       const token = `%${search}%`;
       whereParams.push(token, token, token);
     }
@@ -106,9 +106,9 @@ export const getAdminOrders = async (request, response, next) => {
         o.created_at,
         o.updated_at
       ORDER BY o.created_at DESC
-      OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+      LIMIT ? OFFSET ?
       `,
-      [...whereParams, offset, limit],
+      [...whereParams, limit, offset],
     );
 
     return response.status(200).json({
@@ -153,7 +153,7 @@ export const getAdminOrderById = async (request, response, next) => {
 
     const [orders] = await db.query(
       `
-      SELECT TOP 1
+      SELECT
         o.id,
         o.order_number,
         o.user_id,
@@ -170,6 +170,7 @@ export const getAdminOrderById = async (request, response, next) => {
       FROM orders o
       LEFT JOIN users u ON u.id = o.user_id
       WHERE o.id = ?
+      LIMIT 1
       `,
       [orderId],
     );
@@ -256,7 +257,7 @@ export const updateAdminOrderStatus = async (request, response, next) => {
     const [result] = await db.query(
       `
       UPDATE orders
-      SET status = ?, tracking_number = ?, updated_at = SYSUTCDATETIME()
+      SET status = ?, tracking_number = ?, updated_at = now()
       WHERE id = ?
       `,
       [nextStatus, trackingNumber, orderId],
@@ -267,7 +268,7 @@ export const updateAdminOrderStatus = async (request, response, next) => {
     }
 
     const [rows] = await db.query(
-      'SELECT TOP 1 id, order_number, status, tracking_number, updated_at FROM orders WHERE id = ?',
+      'SELECT id, order_number, status, tracking_number, updated_at FROM orders WHERE id = ? LIMIT 1',
       [orderId],
     );
 

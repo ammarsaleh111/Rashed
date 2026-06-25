@@ -40,7 +40,7 @@ const resolveActor = (req) => {
 
 const getCartByActor = async (db, actor) => {
   const { clause, params } = buildCartWhereClause(actor);
-  const [rows] = await db.query(`SELECT TOP 1 id, user_id, session_id FROM carts WHERE ${clause}`, params);
+  const [rows] = await db.query(`SELECT id, user_id, session_id FROM carts WHERE ${clause} LIMIT 1`, params);
   return rows[0] || null;
 };
 
@@ -52,7 +52,7 @@ const getOrCreateCart = async (db, actor) => {
   }
 
   const [result] = await db.query(
-    'INSERT INTO carts (user_id, session_id) OUTPUT INSERTED.id AS insertId VALUES (?, ?)',
+    'INSERT INTO carts (user_id, session_id) VALUES (?, ?) RETURNING id',
     [actor.userId || null, actor.sessionId || null],
   );
 
@@ -82,10 +82,11 @@ const getCartItemsWithTotals = async (db, cartId) => {
       p.base_price,
       COALESCE(
         (
-          SELECT TOP 1 pi.image_url
+          SELECT pi.image_url
           FROM product_images pi
           WHERE pi.product_id = p.id
           ORDER BY pi.is_primary DESC, pi.display_order ASC, pi.id ASC
+          LIMIT 1
         ),
         ''
       ) AS image_url
@@ -160,7 +161,7 @@ const assertQuantity = (quantity) => {
 };
 
 const getVariant = async (db, variantId) => {
-  const [rows] = await db.query('SELECT TOP 1 id, stock_quantity FROM product_variants WHERE id = ?', [variantId]);
+  const [rows] = await db.query('SELECT id, stock_quantity FROM product_variants WHERE id = ? LIMIT 1', [variantId]);
   return rows[0] || null;
 };
 
@@ -227,7 +228,7 @@ export const addToCart = async (req, res, next) => {
     const cart = await getOrCreateCart(db, actor);
 
     const [existingItems] = await db.query(
-      'SELECT TOP 1 id, quantity FROM cart_items WHERE cart_id = ? AND variant_id = ?',
+      'SELECT id, quantity FROM cart_items WHERE cart_id = ? AND variant_id = ? LIMIT 1',
       [cart.id, variantId],
     );
 
@@ -297,10 +298,11 @@ export const updateCartItem = async (req, res, next) => {
 
     const [rows] = await db.query(
       `
-      SELECT TOP 1 ci.id, ci.quantity, ci.variant_id, pv.stock_quantity
+      SELECT ci.id, ci.quantity, ci.variant_id, pv.stock_quantity
       FROM cart_items ci
       JOIN product_variants pv ON pv.id = ci.variant_id
       WHERE ci.id = ? AND ci.cart_id = ?
+      LIMIT 1
       `,
       [cartItemId, cart.id],
     );

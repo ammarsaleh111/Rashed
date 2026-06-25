@@ -1,148 +1,100 @@
-import mssql from 'mssql';
-import mssqlMsnodesqlv8 from 'mssql/msnodesqlv8.js';
+import pg from 'pg';
+
+const { Pool } = pg;
 
 let pool;
 
-const resolvePort = (value) => {
-  if (value === undefined || value === null || value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-};
-
-const isWindowsAuth = () => String(process.env.DB_AUTH || '').toLowerCase() === 'windows';
-
-let sqlDriver = mssql;
-
-const buildOdbcConnectionString = (database) => {
-  const driver = process.env.DB_ODBC_DRIVER || 'ODBC Driver 18 for SQL Server';
-  const host = process.env.DB_HOST;
-  const instanceName = process.env.DB_INSTANCE;
-  const port = resolvePort(process.env.DB_PORT);
-  const serverName = instanceName ? `${host}\\${instanceName}` : host;
-  const server = !instanceName && port ? `${serverName},${port}` : serverName;
-
-  return `Driver={${driver}};Server=${server};Database=${database};Trusted_Connection=Yes;TrustServerCertificate=Yes;`;
-};
-
 const getDatabaseConfig = () => {
-  const instanceName = process.env.DB_INSTANCE;
-  const port = resolvePort(process.env.DB_PORT);
-
-  if (isWindowsAuth()) {
-    return {
-      connectionString: buildOdbcConnectionString(process.env.DB_NAME),
-      pool: {
-        max: 10,
-        min: 0,
-        idleTimeoutMillis: 30000,
-      },
-    };
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not configured.');
   }
 
   return {
-    server: process.env.DB_HOST,
-    ...(port ? { port } : {}),
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    options: {
-      encrypt: false,
-      trustServerCertificate: true,
-      ...(instanceName ? { instanceName } : {}),
-    },
-    pool: {
-      max: 10,
-      min: 0,
-      idleTimeoutMillis: 30000,
-    },
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
   };
 };
 
+// Converts `?` placeholders (your old MSSQL-style query text) into
+// Postgres-style $1, $2, $3...
 const replacePlaceholders = (queryText) => {
   let index = 0;
   return String(queryText).replace(/\?/g, () => {
     index += 1;
-    return `@param${index}`;
+    return `$${index}`;
   });
-};
-
-const createRequest = (target, params = []) => {
-  const request = target.request();
-
-  params.forEach((value, idx) => {
-    request.input(`param${idx + 1}`, value);
-  });
-
-  return request;
 };
 
 const executeQuery = async (target, queryText, params = []) => {
   const normalizedQuery = replacePlaceholders(queryText);
-  const request = createRequest(target, params);
-  const result = await request.query(normalizedQuery);
-  const rows = result.recordset || [];
+  const result = await target.query(normalizedQuery, params);
+  const rows = result.rows || [];
 
-  result.affectedRows = Array.isArray(result.rowsAffected)
-    ? result.rowsAffected.reduce((sum, count) => sum + count, 0)
-    : Number(result.rowsAffected || 0);
+  const response = {
+    affectedRows: result.rowCount || 0,
+  };
 
   let payload = rows;
+  const statementType = String(queryText).trim().split(/\s+/, 1)[0]?.toUpperCase();
+
+  // If the query used RETURNING id, surface it the same way your
+  // old MSSQL insertId shape did.
   const firstRow = rows[0];
   const hasInsertIdRow =
-    rows.length === 1 && firstRow && Object.prototype.hasOwnProperty.call(firstRow, 'insertId');
+    rows.length >= 1 && firstRow && Object.prototype.hasOwnProperty.call(firstRow, 'id');
 
-  if (hasInsertIdRow) {
-    result.insertId = firstRow.insertId;
+  if (hasInsertIdRow && queryText.trim().toUpperCase().startsWith('INSERT')) {
+    response.insertId = firstRow.id;
     payload = {
-      insertId: firstRow.insertId,
-      affectedRows: result.affectedRows,
+      insertId: firstRow.id,
+      affectedRows: response.affectedRows,
     };
-  } else if (!rows.length && Number.isFinite(result.affectedRows)) {
+  } else if (!rows.length && statementType !== 'SELECT' && Number.isFinite(response.affectedRows)) {
     payload = {
-      affectedRows: result.affectedRows,
+      affectedRows: response.affectedRows,
     };
   }
 
-  return [payload, result];
+  return [payload, response];
 };
 
-const createTransactionalClient = (transaction) => ({
-  query: (queryText, params) => executeQuery(transaction, queryText, params),
-  beginTransaction: () => transaction.begin(),
-  commit: () => transaction.commit(),
-  rollback: () => transaction.rollback(),
-  release: async () => {},
+const createTransactionalClient = (client) => ({
+  query: (queryText, params) => executeQuery(client, queryText, params),
+  beginTransaction: () => client.query('BEGIN'),
+  commit: () => client.query('COMMIT'),
+  rollback: () => client.query('ROLLBACK'),
+  release: async () => client.release(),
 });
 
 const createDatabaseClient = (target) => ({
   query: (queryText, params) => executeQuery(target, queryText, params),
   getConnection: async () => {
-    const transaction = new sqlDriver.Transaction(pool);
-    return createTransactionalClient(transaction);
+    const client = await pool.connect();
+    return createTransactionalClient(client);
   },
 });
 
 export const connectDatabase = async () => {
   try {
-    sqlDriver = isWindowsAuth() ? mssqlMsnodesqlv8 : mssql;
-    pool = await sqlDriver.connect(getDatabaseConfig());
-    await pool.request().query('SELECT 1 AS ok');
+    pool = new Pool(getDatabaseConfig());
+
+    pool.on('error', (err) => {
+      console.error('Unexpected error on idle Postgres client', err);
+    });
+
+    const client = await pool.connect();
+    await client.query('SELECT 1 AS ok');
+    client.release();
+
     console.log('Database connection established.');
     return createDatabaseClient(pool);
   } catch (error) {
-    const detail =
-      error?.message ||
-      error?.originalError?.message ||
-      error?.originalError?.info?.message ||
-      error?.originalError?.info?.error?.message;
-    const message = `Database connection failed: ${detail || error}`;
+    const message = `Database connection failed: ${error?.message || error}`;
     console.error(message);
-    if (error && typeof error === 'object') {
-      console.error(error);
-    }
+    console.error(error);
     throw new Error(message);
   }
 };
@@ -154,4 +106,3 @@ export const getDatabase = () => {
 
   return createDatabaseClient(pool);
 };
-

@@ -12,23 +12,20 @@ const normalizeText = (value) => String(value || '').trim();
 
 const ensureContactMessagesTable = async (db) => {
   await db.query(`
-    IF OBJECT_ID('dbo.contact_messages', 'U') IS NULL
-    BEGIN
-      CREATE TABLE dbo.contact_messages (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        user_id INT NULL,
-        full_name NVARCHAR(150) NOT NULL,
-        email NVARCHAR(255) NOT NULL,
-        subject NVARCHAR(255) NOT NULL,
-        message NVARCHAR(MAX) NOT NULL,
-        status NVARCHAR(20) NOT NULL CONSTRAINT DF_contact_messages_status DEFAULT 'new',
-        admin_note NVARCHAR(MAX) NULL,
-        created_at DATETIME2(0) NOT NULL CONSTRAINT DF_contact_messages_created_at DEFAULT SYSUTCDATETIME(),
-        updated_at DATETIME2(0) NOT NULL CONSTRAINT DF_contact_messages_updated_at DEFAULT SYSUTCDATETIME(),
-        CONSTRAINT CK_contact_messages_status CHECK (status IN ('new', 'read', 'resolved')),
-        CONSTRAINT FK_contact_messages_user FOREIGN KEY (user_id) REFERENCES dbo.users(id) ON DELETE SET NULL
-      )
-    END
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      user_id INT NULL,
+      full_name VARCHAR(150) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      subject VARCHAR(255) NOT NULL,
+      message TEXT NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'new',
+      admin_note TEXT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT CK_contact_messages_status CHECK (status IN ('new', 'read', 'resolved')),
+      CONSTRAINT FK_contact_messages_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    )
   `);
 };
 
@@ -61,8 +58,8 @@ export const submitContactMessage = async (request, response, next) => {
     const [result] = await db.query(
       `
       INSERT INTO contact_messages (user_id, full_name, email, subject, message, status)
-      OUTPUT INSERTED.id AS insertId
       VALUES (?, ?, ?, ?, ?, 'new')
+      RETURNING id
       `,
       [request.user?.id || null, fullName, email, subject, message],
     );

@@ -10,15 +10,14 @@ import {
   resolveActor,
 } from '../models/orderModel.js';
 
-const UNIQUE_VIOLATION_CODES = new Set([2601, 2627]);
+const POSTGRES_UNIQUE_VIOLATION = '23505';
 
 const toMoney = (value) => Number(Number(value || 0).toFixed(2));
 
 const normalizeText = (value) => String(value || '').trim();
 
 const isDuplicateOrderNumberError = (error) => {
-  const number = Number(error?.number || error?.originalError?.number || error?.originalError?.info?.number);
-  return UNIQUE_VIOLATION_CODES.has(number);
+  return error?.code === POSTGRES_UNIQUE_VIOLATION;
 };
 
 const generateOrderNumber = () => {

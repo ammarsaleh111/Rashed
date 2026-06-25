@@ -79,21 +79,19 @@ export const registerUser = async (req, res, next) => {
     const [result] = await db.query(
       `
       INSERT INTO users (email, password_hash, first_name, last_name, role)
-      OUTPUT INSERTED.id AS insertId
       VALUES (?, ?, ?, ?, 'customer')
+      RETURNING id
       `,
       [normalizedEmail, passwordHash, normalizedFirstName, normalizedLastName],
     );
 
     await db.query(
       `
-      IF NOT EXISTS (SELECT 1 FROM user_profiles WHERE user_id = ?)
-      BEGIN
-        INSERT INTO user_profiles (user_id)
-        VALUES (?)
-      END
+      INSERT INTO user_profiles (user_id)
+      VALUES (?)
+      ON CONFLICT (user_id) DO NOTHING
       `,
-      [result.insertId, result.insertId],
+      [result.insertId],
     );
 
     const [rows] = await db.query(
@@ -169,7 +167,7 @@ export const getCurrentUserProfile = async (req, res, next) => {
 
     const [rows] = await db.query(
       `
-      SELECT TOP 1
+      SELECT
         u.id,
         u.email,
         u.first_name,
@@ -182,6 +180,7 @@ export const getCurrentUserProfile = async (req, res, next) => {
       FROM users u
       LEFT JOIN user_profiles up ON up.user_id = u.id
       WHERE u.id = ?
+      LIMIT 1
       `,
       [userId],
     );
