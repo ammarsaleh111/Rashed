@@ -43,6 +43,7 @@ const ShopPage = () => {
     category: searchParams.get('category') || '',
     size: '',
     color: '',
+    price_max: 1000,
     sort_by: searchParams.get('sort_by') || 'featured',
     page: 1,
     limit: 12,
@@ -79,7 +80,11 @@ const ShopPage = () => {
       try {
         setIsLoading(true);
         setErrorMessage('');
-        const response = await getProductsApi(filters);
+        const requestFilters = { ...filters };
+        if (Number(requestFilters.price_max) >= 1000) {
+          delete requestFilters.price_max;
+        }
+        const response = await getProductsApi(requestFilters);
         const nextProducts = Array.isArray(response?.data)
           ? response.data.map(mapApiProductToCard)
           : [];
@@ -220,6 +225,7 @@ const ShopPage = () => {
                   category: '',
                   size: '',
                   color: '',
+                  price_max: 1000,
                   page: 1,
                 }));
               }}
@@ -288,3 +294,4 @@ const ShopPage = () => {
 };
 
 export default ShopPage;
+

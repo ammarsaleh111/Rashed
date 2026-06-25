@@ -5,6 +5,7 @@ import {
 	createAdminProduct,
 	deleteAdminProduct,
 	getAdminProducts,
+	uploadAdminProductImage,
 	updateAdminProduct,
 } from '../controllers/adminProductController.js';
 import {
@@ -25,6 +26,7 @@ router.use(requireAuth, requireAdmin);
 
 router.get('/dashboard', getAdminDashboard);
 router.get('/products', getAdminProducts);
+router.post('/products/upload', uploadAdminProductImage);
 router.post('/products', createAdminProduct);
 router.put('/products/:id', updateAdminProduct);
 router.delete('/products/:id', deleteAdminProduct);
@@ -36,4 +38,5 @@ router.patch('/messages/:id', updateAdminMessage);
 router.delete('/messages/:id', deleteAdminMessage);
 
 export default router;
+
 

@@ -91,6 +91,12 @@ const AuthPage = ({ initialMode = 'login' }) => {
       </div>
 
       <div className="auth-panel relative flex min-h-screen w-full items-center justify-center bg-[#0f0f0f] p-5 sm:p-8 md:w-1/2 md:p-12">
+        <Link
+          to="/"
+          className="absolute left-5 top-5 z-20 border border-white/15 bg-[#1a1a1a] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white transition-colors hover:border-neon hover:text-neon sm:left-8 sm:top-8"
+        >
+          Return to Home
+        </Link>
       
         <div className="w-full max-w-md relative z-10">
           {isResetMode ? (
@@ -296,3 +302,4 @@ const AuthPage = ({ initialMode = 'login' }) => {
 };
 
 export default AuthPage;
+

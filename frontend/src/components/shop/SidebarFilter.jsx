@@ -21,6 +21,8 @@ const SidebarFilter = ({ filters, onFilterChange }) => {
   const selectedCategory = filters?.category || '';
   const selectedSize = filters?.size || '';
   const selectedColor = filters?.color || '';
+  const selectedMaxPrice = Number(filters?.price_max || 1000);
+  const priceLabel = selectedMaxPrice >= 1000 ? '1000+ EGP' : String(selectedMaxPrice) + ' EGP';
 
   return (
     <aside className="storefront-surface hidden w-full p-6 text-white md:sticky md:top-24 md:block">
@@ -121,3 +123,7 @@ const SidebarFilter = ({ filters, onFilterChange }) => {
 };
 
 export default SidebarFilter;
+
+
+
+

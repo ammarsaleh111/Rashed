@@ -224,11 +224,11 @@ const HomePage = () => {
       </section>
 
       {/* Premium Marquee for Brands */}
-      <section className="border-y border-white/10 bg-black py-16">
+      <section className="home-brand-marquee border-y border-white/10 py-16">
         <div className="marquee-track relative">
           {/* Subtle fade edges for the marquee */}
-          <div className="absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-black to-transparent pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-black to-transparent pointer-events-none" />
+          <div className="marquee-fade-left absolute inset-y-0 left-0 z-10 w-32 pointer-events-none" />
+          <div className="marquee-fade-right absolute inset-y-0 right-0 z-10 w-32 pointer-events-none" />
           
           <div className="marquee-content">
             {brandLogos.map((brand, i) => (
@@ -256,7 +256,7 @@ const HomePage = () => {
       </section>
 
       {/* Modernized Trust Grid */}
-      <section className="py-16 md:py-24 bg-[#080b0a]">
+      <section className="home-trust-section py-16 md:py-24">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 md:px-10">
           <div className="mb-12 text-center">
             <h2 className="home-display text-3xl uppercase tracking-widest text-white md:text-4xl">
@@ -269,7 +269,7 @@ const HomePage = () => {
             {trustItems.map((item) => (
               <article 
                 key={item.label} 
-                className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-black/40 py-10 px-6 backdrop-blur-md transition-all duration-500 hover:-translate-y-2 hover:border-neon/30 hover:bg-white/[0.02] hover:shadow-[0_10px_40px_rgba(94,255,51,0.06)]"
+                className="home-trust-card group relative flex flex-col items-center justify-center overflow-hidden py-10 px-6 transition-all duration-500 hover:-translate-y-2 hover:border-neon/30 hover:shadow-[0_10px_40px_rgba(94,255,51,0.06)]"
               >
                 <div className="absolute inset-0 z-0 bg-gradient-to-b from-neon/0 to-neon/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                 <div className="relative z-10 mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 transition-transform duration-500 group-hover:scale-110 group-hover:bg-neon/10">
@@ -290,3 +290,4 @@ const HomePage = () => {
 };
 
 export default HomePage;
+

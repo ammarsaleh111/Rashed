@@ -1382,3 +1382,67 @@ html.light-mode
 html.light-mode .auth-visual .text-neon {
   color: #7dff63 !important;
 }
+
+/* Home marquee and trust grid theme support */
+.home-brand-marquee {
+  background-color: #000000;
+}
+
+.marquee-fade-left {
+  background: linear-gradient(to right, #000000, transparent);
+}
+
+.marquee-fade-right {
+  background: linear-gradient(to left, #000000, transparent);
+}
+
+.home-trust-section {
+  background-color: #080b0a;
+}
+
+.home-trust-card {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+html.light-mode .home-shell .home-brand-marquee {
+  background-color: var(--theme-bg-surface) !important;
+}
+
+html.light-mode .home-shell .marquee-fade-left {
+  background: linear-gradient(to right, var(--theme-bg-surface), transparent) !important;
+}
+
+html.light-mode .home-shell .marquee-fade-right {
+  background: linear-gradient(to left, var(--theme-bg-surface), transparent) !important;
+}
+
+html.light-mode .home-shell .home-brand-marquee .marquee-item {
+  color: color-mix(in srgb, var(--theme-text-primary) 48%, transparent) !important;
+}
+
+html.light-mode .home-shell .home-trust-section {
+  background-color: var(--theme-bg-canvas) !important;
+}
+
+html.light-mode .home-shell .home-trust-section h2,
+html.light-mode .home-shell .home-trust-card p,
+html.light-mode .home-shell .home-trust-card svg {
+  color: var(--theme-text-primary) !important;
+}
+
+html.light-mode .home-shell .home-trust-card {
+  border-color: var(--theme-border-soft) !important;
+  background: var(--theme-bg-surface) !important;
+  box-shadow: var(--theme-shadow-card);
+}
+
+html.light-mode .home-shell .home-trust-card > div:first-child {
+  background: linear-gradient(to bottom, transparent, rgba(34, 197, 94, 0.08)) !important;
+}
+
+html.light-mode .home-shell .home-trust-card > div:nth-child(2) {
+  background-color: color-mix(in srgb, var(--theme-bg-elevated) 82%, transparent) !important;
+}

@@ -1,6 +1,51 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+
 import { getDatabase } from '../config/db.js';
 
 const MAX_PAGE_LIMIT = 200;
+
+const UPLOAD_ROOT = path.resolve(process.cwd(), 'uploads', 'admin-products');
+const ALLOWED_UPLOAD_MIME_TYPES = new Map([
+  ['image/jpeg', 'jpg'],
+  ['image/png', 'png'],
+  ['image/webp', 'webp'],
+  ['image/gif', 'gif'],
+]);
+
+const getRequestOrigin = (request) => {
+  const protocol = request.get('x-forwarded-proto') || request.protocol || 'http';
+  return `${protocol}://${request.get('host')}`;
+};
+
+const parseBase64Image = (value) => {
+  const rawValue = toTrimmedString(value);
+  const match = rawValue.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+
+  if (!match) {
+    throw createHttpError(400, 'imageData must be a valid base64 data URL.');
+  }
+
+  const mimeType = match[1].toLowerCase();
+  const extension = ALLOWED_UPLOAD_MIME_TYPES.get(mimeType);
+
+  if (!extension) {
+    throw createHttpError(400, 'Only JPG, PNG, WebP, and GIF images are supported.');
+  }
+
+  const buffer = Buffer.from(match[2], 'base64');
+
+  if (!buffer.length) {
+    throw createHttpError(400, 'Uploaded image is empty.');
+  }
+
+  if (buffer.length > 10 * 1024 * 1024) {
+    throw createHttpError(413, 'Uploaded image must be 10MB or smaller.');
+  }
+
+  return { buffer, extension };
+};
 
 const createHttpError = (statusCode, message) => {
   const error = new Error(message);
@@ -663,6 +708,26 @@ const normalizeConflictError = (error) => {
   return error;
 };
 
+export const uploadAdminProductImage = async (request, response, next) => {
+  try {
+    const { buffer, extension } = parseBase64Image(request.body.imageData ?? request.body.image_data);
+    await fs.mkdir(UPLOAD_ROOT, { recursive: true });
+
+    const fileName = `${Date.now()}-${randomUUID()}.${extension}`;
+    const absolutePath = path.join(UPLOAD_ROOT, fileName);
+    await fs.writeFile(absolutePath, buffer);
+
+    const imageUrl = `${getRequestOrigin(request)}/uploads/admin-products/${fileName}`;
+
+    return response.status(201).json({
+      success: true,
+      data: { imageUrl },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const getAdminProducts = async (request, response, next) => {
   try {
     const db = getDatabase();
@@ -1043,3 +1108,4 @@ export const deleteAdminProduct = async (request, response, next) => {
     connection.release();
   }
 };
+

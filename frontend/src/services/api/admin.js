@@ -10,6 +10,11 @@ export const getAdminProducts = async (params = {}) => {
   return response.data;
 };
 
+export const uploadAdminProductImage = async (imageData) => {
+  const response = await apiClient.post('/admin/products/upload', { imageData });
+  return response.data;
+};
+
 export const createAdminProduct = async (payload) => {
   const response = await apiClient.post('/admin/products', payload);
   return response.data;
@@ -54,4 +59,5 @@ export const deleteAdminMessage = async (messageId) => {
   const response = await apiClient.delete(`/admin/messages/${messageId}`);
   return response.data;
 };
+
 
