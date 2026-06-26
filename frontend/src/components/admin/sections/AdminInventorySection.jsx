@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import {
   createAdminProduct,
   deleteAdminProduct,
   getAdminProducts,
   updateAdminProduct,
-  uploadAdminProductImage,
 } from '../../../services/api/admin.js';
 
 const categoryOptions = [
@@ -16,11 +15,16 @@ const categoryOptions = [
   'Accessories',
 ];
 
-const colorOptions = ['Black', 'White', 'Gray'];
+const colorOptions = [
+  'Black', 'White', 'Gray', 'Silver', 'Gold',
+  'Red','Blue', 'Green',
+  'Yellow', 'Orange', 
+  'Purple', 'Pink', 'Beige', 'Brown'
+];
 
 const createEmptyVariant = () => ({
   id: null,
-  size: 'One Size',
+  size: 'L',
   color: 'Black',
 });
 
@@ -64,14 +68,6 @@ const parseNonNegativeNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 };
 
-const readFileAsDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('Unable to read selected image.'));
-    reader.readAsDataURL(file);
-  });
-
 const createPayloadFromForm = ({ form, removedVariantIds, isEdit }) => {
   const payload = {
     name: String(form.name || '').trim(),
@@ -106,14 +102,12 @@ const createPayloadFromForm = ({ form, removedVariantIds, isEdit }) => {
 };
 
 const AdminInventorySection = ({ inventory, onInventoryMutated }) => {
-  const fileInputRef = useRef(null);
   const [products, setProducts] = useState([]);
   const [meta, setMeta] = useState({ totalCount: 0, page: 1, limit: 12, totalPages: 1 });
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
@@ -164,7 +158,6 @@ const AdminInventorySection = ({ inventory, onInventoryMutated }) => {
     setEditingProductId(null);
     setFormData(createEmptyForm());
     setRemovedVariantIds([]);
-    setIsUploadingImage(false);
   };
 
   const openCreateForm = () => {
@@ -211,29 +204,6 @@ const AdminInventorySection = ({ inventory, onInventoryMutated }) => {
       }
       return { ...previous, variants: previous.variants.filter((_, variantIndex) => variantIndex !== index) };
     });
-  };
-
-  const uploadImageFile = async (file) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setLoadError('Please choose an image file.');
-      return;
-    }
-
-    setIsUploadingImage(true);
-    setLoadError('');
-
-    try {
-      const imageData = await readFileAsDataUrl(file);
-      const response = await uploadAdminProductImage(imageData);
-      const imageUrl = response?.data?.imageUrl;
-      if (!imageUrl) throw new Error('Image upload did not return a URL.');
-      updateFormField('imageUrl', imageUrl);
-    } catch (error) {
-      setLoadError(error?.response?.data?.message || error?.message || 'Unable to upload image.');
-    } finally {
-      setIsUploadingImage(false);
-    }
   };
 
   const handleSaveProduct = async (event) => {
@@ -426,36 +396,37 @@ const AdminInventorySection = ({ inventory, onInventoryMutated }) => {
               </div>
 
               <div className="border border-white/10 p-4">
-                <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-neon">Image</p>
-                {formData.imageUrl ? (
-                  <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)] md:items-center">
-                    <img src={formData.imageUrl} alt="Product preview" className="h-44 w-full border border-white/10 object-cover md:h-36" />
-                    <div className="min-w-0">
-                      <p className="truncate text-xs text-white/65">{formData.imageUrl}</p>
-                      <button type="button" onClick={() => updateFormField('imageUrl', '')} className="mt-4 border border-red-500/40 bg-[#2a1313] px-4 py-2 text-[10px] uppercase tracking-widest text-red-200">Remove</button>
+                <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-neon">Image Link</p>
+                <div className="space-y-4">
+                  <label className="block space-y-2">
+                    <span className="block text-[10px] uppercase tracking-widest text-white/45">Image URL</span>
+                    <input
+                      value={formData.imageUrl}
+                      onChange={(event) => updateFormField('imageUrl', event.target.value)}
+                      type="url"
+                      placeholder="https://example.com/product-image.jpg"
+                      className="w-full border border-white/10 bg-[#1a1a1a] px-4 py-3 text-white outline-none focus:border-neon"
+                    />
+                  </label>
+                  {formData.imageUrl ? (
+                    <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)] md:items-center">
+                      <img src={formData.imageUrl} alt="Product preview" className="h-44 w-full border border-white/10 object-cover md:h-36" />
+                      <div className="min-w-0">
+                        <p className="truncate text-xs text-white/65">{formData.imageUrl}</p>
+                        <button type="button" onClick={() => updateFormField('imageUrl', '')} className="mt-4 border border-red-500/40 bg-[#2a1313] px-4 py-2 text-[10px] uppercase tracking-widest text-red-200">
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      uploadImageFile(event.dataTransfer.files?.[0]);
-                    }}
-                    className="flex min-h-40 w-full flex-col items-center justify-center border border-dashed border-white/20 bg-[#151515] px-4 py-8 text-center transition-colors hover:border-neon"
-                  >
-                    <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-white">{isUploadingImage ? 'Uploading...' : 'Drop image or click to upload'}</span>
-                    <span className="mt-2 text-xs text-white/45">JPG, PNG, WebP, or GIF up to 10MB</span>
-                  </button>
-                )}
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => uploadImageFile(event.target.files?.[0])} />
+                  ) : (
+                    <p className="text-xs text-white/45">Paste a direct image link here. The product will use that URL in the gallery.</p>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-end gap-3">
                 <button type="button" onClick={closeForm} className="border border-white/15 bg-[#1a1a1a] px-5 py-3 text-[10px] uppercase tracking-widest text-white">Cancel</button>
-                <button type="submit" disabled={isSaving || isUploadingImage} className="bg-neon px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-black transition-colors hover:bg-[#4ade80] disabled:cursor-not-allowed disabled:opacity-45">
+                <button type="submit" disabled={isSaving} className="bg-neon px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-black transition-colors hover:bg-[#4ade80] disabled:cursor-not-allowed disabled:opacity-45">
                   {isSaving ? 'Saving...' : editingProductId ? 'Update Product' : 'Create Product'}
                 </button>
               </div>
