@@ -3,6 +3,7 @@ import pg from 'pg';
 const { Pool } = pg;
 
 let pool;
+let poolInitializationPromise;
 
 const getDatabaseConfig = () => {
   if (!process.env.DATABASE_URL) {
@@ -78,25 +79,40 @@ const createDatabaseClient = (target) => ({
 });
 
 export const connectDatabase = async () => {
-  try {
-    pool = new Pool(getDatabaseConfig());
-
-    pool.on('error', (err) => {
-      console.error('Unexpected error on idle Postgres client', err);
-    });
-
-    const client = await pool.connect();
-    await client.query('SELECT 1 AS ok');
-    client.release();
-
-    console.log('Database connection established.');
+  if (pool) {
     return createDatabaseClient(pool);
-  } catch (error) {
-    const message = `Database connection failed: ${error?.message || error}`;
-    console.error(message);
-    console.error(error);
-    throw new Error(message);
   }
+
+  if (poolInitializationPromise) {
+    return poolInitializationPromise;
+  }
+
+  poolInitializationPromise = (async () => {
+    try {
+      pool = new Pool(getDatabaseConfig());
+
+      pool.on('error', (err) => {
+        console.error('Unexpected error on idle Postgres client', err);
+      });
+
+      const client = await pool.connect();
+      await client.query('SELECT 1 AS ok');
+      client.release();
+
+      console.log('Database connection established.');
+      return createDatabaseClient(pool);
+    } catch (error) {
+      const message = `Database connection failed: ${error?.message || error}`;
+      console.error(message);
+      console.error(error);
+      pool = undefined;
+      throw new Error(message);
+    } finally {
+      poolInitializationPromise = undefined;
+    }
+  })();
+
+  return poolInitializationPromise;
 };
 
 export const getDatabase = () => {
